@@ -17,7 +17,9 @@ class MemoryNumberChainRepository {
     if (!this.enabled) return { status: 'disabled' };
     const expected = this.current + 1n;
     if (number !== expected || userId === this.lastUserId) {
-      return { status: 'incorrect', expected: expected.toString() };
+      this.current = 0n;
+      this.lastUserId = null;
+      return { status: 'incorrect', expected: '1' };
     }
     this.current = number;
     this.lastUserId = userId;
@@ -69,13 +71,17 @@ test('number chain reacts to valid and invalid numbers while ignoring text', asy
   assert.equal((await service.handleMessage(skipped)).status, 'incorrect');
   assert.deepEqual(skipped.reactions, ['❌']);
 
-  const second = createMessage('2', 'b');
-  assert.equal((await service.handleMessage(second)).status, 'correct');
-  assert.deepEqual(second.reactions, ['✅']);
+  const restarted = createMessage('1', 'b');
+  assert.equal((await service.handleMessage(restarted)).status, 'correct');
+  assert.deepEqual(restarted.reactions, ['✅']);
 
   const leadingZero = createMessage('03', 'c');
   assert.equal((await service.handleMessage(leadingZero)).status, 'incorrect');
   assert.deepEqual(leadingZero.reactions, ['❌']);
+
+  const restartedAgain = createMessage('1', 'c');
+  assert.equal((await service.handleMessage(restartedAgain)).status, 'correct');
+  assert.deepEqual(restartedAgain.reactions, ['✅']);
 });
 
 test('number chain ignores bots and disabled channels', async () => {

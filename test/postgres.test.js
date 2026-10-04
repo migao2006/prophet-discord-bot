@@ -123,6 +123,10 @@ test('PostgreSQL migration and activity writes are idempotent', {
     ]);
     assert.equal(concurrent.filter((result) => result.status === 'correct').length, 1);
     assert.equal(concurrent.filter((result) => result.status === 'incorrect').length, 1);
+    assert.equal(
+      (await numberChain.tryAdvance(guildId, 'game', 'player-c', 1n)).status,
+      'correct',
+    );
     assert.equal((await numberChain.setEnabled(guildId, 'game', false)).changed, true);
     assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
       changed: true,
