@@ -34,10 +34,10 @@ DISCORD_GUILD_ID=你的測試伺服器_ID
 3. 從 **Bot** 取得 Token。
 4. 在 **Installation** 啟用 Guild Install，加入 `bot` 和 `applications.commands` scopes。
 5. Bot 權限只需 **View Channels** 與 **Send Messages**。
-6. 將 Bot 加入測試伺服器，並取得該伺服器 ID。
+6. 將 Bot 加入至少一個伺服器；每個要使用指令的伺服器都必須安裝此 Bot。
 7. 保持 **Interactions Endpoint URL** 空白；本專案使用 Gateway 接收互動。
 
-首次建立或修改指令後執行：
+首次建立或修改指令後執行以下命令，將指令註冊為所有伺服器都能使用的全域指令：
 
 ```powershell
 npm.cmd run register
@@ -64,7 +64,7 @@ Northflank 的 Developer Sandbox 運算資源本身免費，但建立 Service �
 
 推送新版程式後，GitHub Actions 會更新 `latest` 映像；在 Northflank 重新部署服務即可套用新版。
 
-Application ID 與 Guild ID 只在註冊指令時使用，不需要放入長時間執行的 Northflank Service。修改指令定義後，重新執行 `npm run register`。
+Application ID 只在註冊指令時使用，不需要放入長時間執行的 Northflank Service。`DISCORD_GUILD_ID` 是選填；若設定，註冊流程會移除該伺服器裡舊的伺服器專用指令。修改指令定義後，重新執行 `npm run register`。
 
 ## Docker
 
@@ -81,7 +81,7 @@ npm.cmd test
 docker build -t prophet-discord-bot .
 ```
 
-部署後在 Discord 測試 `/ping` 與 `/hello`。若指令未出現，檢查 Server ID、安裝 scopes 和 `npm run register` 的輸出；若指令逾時，檢查 Northflank Logs 與 Bot Token。
+部署後在 Discord 測試 `/ping` 與 `/hello`。若全域指令尚未出現，先稍候 Discord 同步並確認該伺服器已安裝 Bot；若指令逾時，檢查 Northflank Logs 與 Bot Token。
 
 ## 安全性
 

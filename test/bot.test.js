@@ -8,6 +8,10 @@ test('missing credentials fail before any network connection', () => {
   assert.throws(() => readConfig({}), /DISCORD_TOKEN/);
   assert.throws(() => readConfig({ DISCORD_TOKEN: 'replace_with_bot_token' }), /DISCORD_TOKEN/);
   assert.throws(() => readConfig({ DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: 'invalid' }, { registration: true }), /DISCORD_APPLICATION_ID/);
+  assert.deepEqual(
+    readConfig({ DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: '1556252999041556582' }, { registration: true }),
+    { DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: '1556252999041556582' },
+  );
 });
 
 test('ping responds privately and non-command events are ignored', async () => {
