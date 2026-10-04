@@ -100,6 +100,7 @@ test('Chinese activity command requires a user and replies publicly', async () =
   const definition = commands.find((command) => command.name === '今日發言').toJSON();
   assert.equal(definition.options[0].name, '使用者');
   assert.equal(definition.options[0].required, true);
+  assert.equal(definition.options[0].autocomplete, true);
 
   let deferred = false;
   let reply;
@@ -108,19 +109,21 @@ test('Chinese activity command requires a user and replies publicly', async () =
     isChatInputCommand: () => true,
     commandName: '今日發言',
     inGuild: () => true,
+    client: { user: { id: 'bot' } },
+    options: { getString: () => '123456789012345678' },
+    isAutocomplete: () => false,
     guild: {
+      members: { fetch: async () => ({ id: '123456789012345678' }) },
       channels: {
         fetch: async () => new Map([['a', {
           type: 0,
           permissionsFor: () => ({ has: () => true }),
           messages: {
-            fetch: async () => new Map([['1', { id: '1', createdTimestamp: now, author: { id: 'target' } }]]),
+            fetch: async () => new Map([['1', { id: '1', createdTimestamp: now, author: { id: '123456789012345678' } }]]),
           },
         }]]),
       },
     },
-    client: { user: { id: 'bot' } },
-    options: { getUser: () => ({ id: 'target' }) },
     deferReply: async () => { deferred = true; },
     editReply: async (value) => { reply = value; },
   };
@@ -130,4 +133,31 @@ test('Chinese activity command requires a user and replies publicly', async () =
   assert.match(reply.content, /今天（台灣時間）/);
   assert.match(reply.content, /\*\*1\*\*/);
   assert.deepEqual(reply.allowedMentions, { parse: [] });
+});
+
+test('member autocomplete searches the whole guild and returns Discord choices', async () => {
+  let response;
+  const interaction = {
+    isAutocomplete: () => true,
+    commandName: '今日發言',
+    inGuild: () => true,
+    guild: {
+      members: {
+        search: async ({ query, limit }) => {
+          assert.equal(query, 'Pre');
+          assert.equal(limit, 25);
+          return new Map([['123456789012345678', {
+            id: '123456789012345678',
+            displayName: 'Prelude',
+            user: { username: 'baiseq_0309' },
+          }]]);
+        },
+      },
+    },
+    options: { getFocused: () => 'Pre' },
+    respond: async (value) => { response = value; },
+  };
+
+  await handleInteraction(interaction);
+  assert.deepEqual(response, [{ name: 'Prelude (baiseq_0309)', value: '123456789012345678' }]);
 });

@@ -10,7 +10,7 @@ try {
   process.exit(1);
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`已上線：${readyClient.user.tag}`);
 });

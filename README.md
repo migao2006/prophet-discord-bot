@@ -4,7 +4,7 @@
 
 - `/ping`：私密回覆目前是否在線。
 - `/hello`：在頻道公開向使用者問好。
-- `/今日發言 使用者:@成員`：公開統計該成員今天在伺服器一般文字與公告頻道的發言次數（台灣時間）。
+- `/今日發言 使用者:成員`：從整個伺服器搜尋成員，公開統計該成員今天在一般文字與公告頻道的發言次數（台灣時間）。Discord 每次最多顯示 25 個候選，輸入暱稱或帳號可繼續篩選。
 
 機器人透過 Discord Gateway 主動連線，不需要網域、HTTP 伺服器或公開連接埠。
 
@@ -35,8 +35,9 @@ DISCORD_GUILD_ID=你的測試伺服器_ID
 3. 從 **Bot** 取得 Token。
 4. 在 **Installation** 啟用 Guild Install，加入 `bot` 和 `applications.commands` scopes。
 5. Bot 權限需要 **View Channels**、**Send Messages** 與 **Read Message History**。
-6. 將 Bot 加入至少一個伺服器；每個要使用指令的伺服器都必須安裝此 Bot。
-7. 保持 **Interactions Endpoint URL** 空白；本專案使用 Gateway 接收互動。
+6. 在 **Bot → Privileged Gateway Intents** 啟用 **Server Members Intent**，供 `/今日發言` 搜尋整個伺服器的成員。
+7. 將 Bot 加入至少一個伺服器；每個要使用指令的伺服器都必須安裝此 Bot。
+8. 保持 **Interactions Endpoint URL** 空白；本專案使用 Gateway 接收互動。
 
 首次建立或修改指令後執行以下命令，將指令註冊為所有伺服器都能使用的全域指令：
 
@@ -86,6 +87,6 @@ docker build -t prophet-discord-bot .
 
 ## 安全性
 
-- Bot 不需要 Administrator、Message Content 或其他 Privileged Gateway Intents。
+- Bot 不需要 Administrator 或 Message Content Intent；成員搜尋只使用 Server Members Intent。
 - 不要在 GitHub 或 Northflank build arguments 儲存 Token；使用 Runtime Secret。
 - 如果 Token 曾外洩，立即在 Discord Developer Portal 重設，再更新 Northflank Secret。
