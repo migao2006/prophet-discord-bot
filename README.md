@@ -51,6 +51,8 @@ npm.cmd start
 
 ## Northflank 免費部署
 
+Northflank 的 Developer Sandbox 運算資源本身免費，但目前建立 Service 仍要求新增信用卡作為防濫用驗證。若不希望提供付款方式，可先建立免費 Project，但無法完成 Service 部署。
+
 1. 建立 Northflank Free Project，Deployment target 選 **Northflank Cloud**。
 2. 選擇免費可用的 `us-central` 區域。
 3. 連接此 GitHub 儲存庫，建立 **Combined Service**。
