@@ -1,0 +1,85 @@
+# 預言者 Discord Bot
+
+使用 Node.js 24 與 discord.js 製作的輕量 Discord 機器人，提供：
+
+- `/ping`：私密回覆目前是否在線。
+- `/hello`：在頻道公開向使用者問好。
+
+機器人透過 Discord Gateway 主動連線，不需要網域、HTTP 伺服器或公開連接埠。
+
+## 本機設定
+
+需要 Node.js 24.17.0 或更新版本。
+
+```powershell
+npm.cmd ci
+Copy-Item .env.example .env
+notepad .env
+```
+
+`.env` 需要以下資料：
+
+```dotenv
+DISCORD_TOKEN=你的_Bot_Token
+DISCORD_APPLICATION_ID=你的_Application_ID
+DISCORD_GUILD_ID=你的測試伺服器_ID
+```
+
+`.env` 已被 Git 排除，請勿將 Bot Token 提交到版本控制、Issue 或聊天訊息。
+
+## Discord 應用程式
+
+1. 在 [Discord Developer Portal](https://discord.com/developers/applications) 建立「預言者」。
+2. 從 **General Information** 取得 Application ID。
+3. 從 **Bot** 取得 Token。
+4. 在 **Installation** 啟用 Guild Install，加入 `bot` 和 `applications.commands` scopes。
+5. Bot 權限只需 **View Channels** 與 **Send Messages**。
+6. 將 Bot 加入測試伺服器，並取得該伺服器 ID。
+7. 保持 **Interactions Endpoint URL** 空白；本專案使用 Gateway 接收互動。
+
+首次建立或修改指令後執行：
+
+```powershell
+npm.cmd run register
+```
+
+本機啟動：
+
+```powershell
+npm.cmd start
+```
+
+## Northflank 免費部署
+
+1. 建立 Northflank Free Project，Deployment target 選 **Northflank Cloud**。
+2. 選擇免費可用的 `us-central` 區域。
+3. 連接此 GitHub 儲存庫，建立 **Combined Service**。
+4. Build type 使用專案根目錄的 `Dockerfile`。
+5. 不建立公開連接埠、網域或 HTTP health check。
+6. 在 Runtime variables / Secrets 加入 `DISCORD_TOKEN`。
+7. 部署後在 Logs 確認出現 `已上線`。
+
+Application ID 與 Guild ID 只在註冊指令時使用，不需要放入長時間執行的 Northflank Service。修改指令定義後，重新執行 `npm run register`。
+
+## Docker
+
+```powershell
+docker build -t prophet-discord-bot .
+docker run --rm --env-file .env prophet-discord-bot
+```
+
+## 驗證
+
+```powershell
+npm.cmd run check
+npm.cmd test
+docker build -t prophet-discord-bot .
+```
+
+部署後在 Discord 測試 `/ping` 與 `/hello`。若指令未出現，檢查 Server ID、安裝 scopes 和 `npm run register` 的輸出；若指令逾時，檢查 Northflank Logs 與 Bot Token。
+
+## 安全性
+
+- Bot 不需要 Administrator 或 Privileged Gateway Intents。
+- 不要在 GitHub 或 Northflank build arguments 儲存 Token；使用 Runtime Secret。
+- 如果 Token 曾外洩，立即在 Discord Developer Portal 重設，再更新 Northflank Secret。
