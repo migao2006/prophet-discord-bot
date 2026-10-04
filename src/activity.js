@@ -1,6 +1,7 @@
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 
 const TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1_000;
 const SCAN_CONCURRENCY = 2;
 
 export function taipeiDateString(timestamp = Date.now()) {
@@ -11,6 +12,53 @@ export function taipeiDateString(timestamp = Date.now()) {
 export function startOfTaipeiDay(now = Date.now()) {
   const taipei = new Date(now + TAIPEI_OFFSET_MS);
   return Date.UTC(taipei.getUTCFullYear(), taipei.getUTCMonth(), taipei.getUTCDate()) - TAIPEI_OFFSET_MS;
+}
+
+export function memberActivityWindow(now = Date.now()) {
+  const endAt = now;
+  const startAt = startOfTaipeiDay(now) - 29 * DAY_MS;
+  return { startAt, endAt, startDate: taipeiDateString(startAt) };
+}
+
+export function summarizeVoiceSessions(sessions, startAt, endAt) {
+  let seconds = 0;
+  let lastActivityAt = null;
+  const activeDates = new Set();
+
+  for (const session of sessions) {
+    const joinedAt = Math.max(new Date(session.joined_at).getTime(), startAt);
+    const rawLeftAt = session.left_at ? new Date(session.left_at).getTime() : endAt;
+    const leftAt = Math.min(rawLeftAt, endAt);
+    if (leftAt <= joinedAt) continue;
+    seconds += Math.floor((leftAt - joinedAt) / 1_000);
+    const activityAt = session.left_at ? leftAt : endAt;
+    lastActivityAt = Math.max(lastActivityAt ?? 0, activityAt);
+
+    for (let day = startOfTaipeiDay(joinedAt); day < leftAt; day += DAY_MS) {
+      activeDates.add(taipeiDateString(day));
+    }
+  }
+
+  return { seconds, activeDates: [...activeDates], lastActivityAt };
+}
+
+export function formatVoiceDuration(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours > 0 ? `${hours} 小時 ${remainder} 分` : `${minutes} 分`;
+}
+
+export function formatTaipeiActivity(timestamp, now = Date.now()) {
+  if (!timestamp) return '無紀錄';
+  const date = new Date(timestamp + TAIPEI_OFFSET_MS);
+  const dateString = date.toISOString().slice(0, 10);
+  const time = date.toISOString().slice(11, 16);
+  const today = taipeiDateString(now);
+  const yesterday = taipeiDateString(startOfTaipeiDay(now) - DAY_MS);
+  if (dateString === today) return `今天 ${time}`;
+  if (dateString === yesterday) return `昨天 ${time}`;
+  return `${dateString.replaceAll('-', '/')} ${time}`;
 }
 
 export async function countChannelMessages(channel, userId, startTimestamp, now = Date.now()) {

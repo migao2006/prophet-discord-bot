@@ -38,6 +38,46 @@ test('PostgreSQL migration and activity writes are idempotent', {
     );
     const cursor = await repository.getCursor(guildId, 'channel');
     assert.equal(cursor.last_message_id, message.messageId);
+
+    await repository.prepareChannelBackfill(
+      guildId,
+      'channel',
+      new Date('2026-09-05T16:00:00Z'),
+    );
+    assert.deepEqual(await repository.getBackfillStatus(guildId, ['channel']), {
+      total: 1,
+      incomplete: 1,
+    });
+    await repository.updateChannelBackfill(guildId, 'channel', message.messageId, true);
+    assert.deepEqual(await repository.getBackfillStatus(guildId, ['channel']), {
+      total: 1,
+      incomplete: 0,
+    });
+
+    const joinedAt = new Date('2026-10-04T02:00:00Z');
+    await repository.ensureVoiceTrackingStarted(guildId, joinedAt);
+    await repository.transitionVoiceSession({
+      guildId,
+      userId: 'user',
+      channelId: 'voice',
+      at: joinedAt,
+    });
+    await repository.transitionVoiceSession({
+      guildId,
+      userId: 'user',
+      channelId: null,
+      at: new Date('2026-10-04T03:00:00Z'),
+    });
+    const activity = await repository.getMemberActivity(
+      guildId,
+      'user',
+      '2026-09-06',
+      new Date('2026-09-05T16:00:00Z'),
+      new Date('2026-10-05T00:00:00Z'),
+      ['channel'],
+    );
+    assert.equal(activity.voiceSessions.length, 1);
+    assert.equal(activity.voiceSessions[0].channel_id, 'voice');
   } finally {
     await pool.end();
   }

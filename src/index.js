@@ -12,6 +12,7 @@ import { migrate } from './migrate.js';
 import { ActivityRepository } from './activity-repository.js';
 import { ActivityTracker } from './activity-tracker.js';
 import { ActivityService } from './activity-service.js';
+import { VoiceTracker } from './voice-tracker.js';
 import { logger } from './logger.js';
 
 let config;
@@ -34,9 +35,14 @@ try {
 const commands = await loadCommands();
 const repository = new ActivityRepository(database);
 const tracker = new ActivityTracker(repository, logger);
+const voiceTracker = new VoiceTracker(repository, logger);
 const activityService = new ActivityService(repository, tracker, logger);
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
   partials: [Partials.Channel, Partials.Message],
 });
 
@@ -48,13 +54,29 @@ const handleInteraction = createInteractionHandler({
 
 client.once(Events.ClientReady, async (readyClient) => {
   await tracker.initializeClient(readyClient);
+  await voiceTracker.initializeClient(readyClient);
   logger.info('bot_ready', { userTag: readyClient.user.tag, guilds: readyClient.guilds.cache.size });
+  tracker.backfillClient(readyClient).catch((error) => {
+    logger.error('activity_backfill_failed', { errorCode: errorCode(error) });
+  });
 });
 client.on(Events.Error, (error) => logger.error('discord_error', { errorCode: errorCode(error) }));
 client.on(Events.InteractionCreate, handleInteraction);
 client.on(Events.GuildCreate, (guild) => {
-  tracker.resetAndInitializeGuild(guild, client.user).catch((error) => {
+  tracker.resetAndInitializeGuild(guild, client.user).then(async () => {
+    await voiceTracker.initializeGuild(guild);
+    await tracker.backfillRecentGuild(guild, client.user);
+  }).catch((error) => {
     logger.error('guild_initialization_failed', { guildId: guild.id, errorCode: errorCode(error) });
+  });
+});
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+  voiceTracker.handleVoiceStateUpdate(oldState, newState).catch((error) => {
+    logger.error('voice_tracking_failed', {
+      guildId: newState.guild?.id ?? oldState.guild?.id,
+      userId: newState.id ?? oldState.id,
+      errorCode: errorCode(error),
+    });
   });
 });
 client.on(Events.MessageCreate, (message) => {
@@ -87,6 +109,7 @@ async function shutdown(signal) {
   shuttingDown = true;
   logger.info('bot_shutdown', { signal });
   client.removeAllListeners();
+  voiceTracker.stop();
   client.destroy();
   await database.end().catch(() => {});
 }

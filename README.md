@@ -3,10 +3,13 @@
 使用 Node.js 24、discord.js 與 PostgreSQL 製作的 Discord 機器人，提供：
 
 - `/今日發言 使用者:成員`：使用 Discord 原生成員選擇器，公開統計該成員今天在一般文字與公告頻道的發言次數（台灣時間）。
+- `/成員活躍查詢 使用者:成員`：限管理員使用，公開顯示成員近 30 個台灣日曆日的發言、活躍天數、語音時數、最後活動與前三個文字頻道。
 
 機器人透過 Discord Gateway 主動連線，不需要網域、HTTP 伺服器或公開連接埠。程式採用模組化指令、服務層與資料存取層，方便繼續增加功能。
 
 發言次數會即時彙總到 PostgreSQL。首次部署當天使用 Discord 歷史訊息確保結果完整；下一個台灣日開始優先查詢資料庫。機器人重連時會按照各頻道游標補抓遺漏訊息。
+
+新版啟動後會在背景以兩個頻道的併發量補抓最近 30 天訊息，完成前活躍查詢會標示「歷史發言同步中」。語音只會從語音追蹤功能上線後開始累積，計入一般語音與舞台頻道，排除伺服器 AFK 頻道；即使成員獨處、靜音或拒聽仍會計時。
 
 ## 本機設定
 
@@ -39,7 +42,7 @@ DATABASE_SSL=false
 5. Bot 權限需要 **View Channels**、**Send Messages** 與 **Read Message History**。
 6. 將 Bot 加入至少一個伺服器；每個要使用指令的伺服器都必須安裝此 Bot。
 7. 保持 **Interactions Endpoint URL** 空白；本專案使用 Gateway 接收互動。
-8. Privileged Gateway Intents 全部保持關閉；程式只使用一般的 Guilds 與 Guild Messages Intents。
+8. Privileged Gateway Intents 全部保持關閉；程式使用一般的 Guilds、Guild Messages 與 Guild Voice States Intents。
 
 首次建立或修改指令後執行以下命令，將指令註冊為所有伺服器都能使用的全域指令：
 
@@ -89,11 +92,11 @@ docker build -t prophet-discord-bot .
 
 設定 `TEST_DATABASE_URL` 後，`npm test` 也會執行真實 PostgreSQL migration、去重與刪除回減測試；未設定時只略過這一項整合測試。
 
-部署後由伺服器管理者自行測試 `/今日發言`。若統計略過頻道，確認 Bot 在該頻道具有 View Channel 與 Read Message History；若指令逾時，檢查 Northflank Logs、資料庫連線與 Bot Token。
+部署後由伺服器管理者自行測試 `/今日發言` 與 `/成員活躍查詢`。若統計略過頻道，確認 Bot 在該頻道具有 View Channel 與 Read Message History；若指令逾時，檢查 Northflank Logs、資料庫連線與 Bot Token。
 
 ## 安全性
 
 - Bot 不需要 Administrator、Server Members Intent 或 Message Content Intent。
-- 資料庫只保存 Discord ID、日期、每日彙總次數與同步游標，不保存訊息內容。
+- 資料庫只保存 Discord ID、日期、每日彙總次數、同步游標與語音進出時間，不保存訊息內容或語音內容。
 - 不要在 GitHub 或 Northflank build arguments 儲存 Token；使用 Runtime Secret。
 - 如果 Token 曾外洩，立即在 Discord Developer Portal 重設，再更新 Northflank Secret。
