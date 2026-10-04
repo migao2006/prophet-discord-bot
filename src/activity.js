@@ -3,6 +3,11 @@ import { ChannelType, PermissionFlagsBits } from 'discord.js';
 const TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const SCAN_CONCURRENCY = 2;
 
+export function taipeiDateString(timestamp = Date.now()) {
+  const taipei = new Date(timestamp + TAIPEI_OFFSET_MS);
+  return taipei.toISOString().slice(0, 10);
+}
+
 export function startOfTaipeiDay(now = Date.now()) {
   const taipei = new Date(now + TAIPEI_OFFSET_MS);
   return Date.UTC(taipei.getUTCFullYear(), taipei.getUTCMonth(), taipei.getUTCDate()) - TAIPEI_OFFSET_MS;
@@ -92,4 +97,17 @@ export async function countTodayMessages(guild, botUser, userId, now = Date.now(
   }
 
   return { count, scannedChannels, skippedChannels };
+}
+
+export async function readableActivityChannels(guild, botUser) {
+  const channels = await guild.channels.fetch();
+  const candidates = [...channels.values()].filter((channel) => (
+    channel
+    && [ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(channel.type)
+  ));
+  const readable = candidates.filter((channel) => channel.permissionsFor(botUser)?.has([
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.ReadMessageHistory,
+  ]));
+  return { readable, skippedChannels: candidates.length - readable.length };
 }

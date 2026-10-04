@@ -1,6 +1,6 @@
 import { REST, Routes } from 'discord.js';
 import { readConfig, errorCode } from './config.js';
-import { commands } from './commands.js';
+import { loadCommands } from './command-loader.js';
 
 let config;
 try {
@@ -10,14 +10,13 @@ try {
   process.exit(1);
 }
 
+const commands = await loadCommands();
 const rest = new REST({ version: '10' }).setToken(config.DISCORD_TOKEN);
 try {
-  // Replace the complete global command set so removed commands disappear too.
   await rest.put(Routes.applicationCommands(config.DISCORD_APPLICATION_ID), {
-    body: commands.map((command) => command.toJSON()),
+    body: [...commands.values()].map((command) => command.data.toJSON()),
   });
-  console.log(`已同步 ${commands.length} 個全域指令`);
-  // Remove the former test-server commands so Discord does not show stale duplicates.
+  console.log(`已同步 ${commands.size} 個全域指令`);
   if (config.DISCORD_GUILD_ID) {
     await rest.put(
       Routes.applicationGuildCommands(config.DISCORD_APPLICATION_ID, config.DISCORD_GUILD_ID),

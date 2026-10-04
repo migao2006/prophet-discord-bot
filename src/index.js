@@ -1,6 +1,18 @@
-import { Client, Events, GatewayIntentBits, MessageFlags } from 'discord.js';
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  Partials,
+} from 'discord.js';
 import { readConfig, errorCode } from './config.js';
-import { handleInteraction } from './commands.js';
+import { loadCommands } from './command-loader.js';
+import { createInteractionHandler } from './interaction-router.js';
+import { createDatabase } from './database.js';
+import { migrate } from './migrate.js';
+import { ActivityRepository } from './activity-repository.js';
+import { ActivityTracker } from './activity-tracker.js';
+import { ActivityService } from './activity-service.js';
+import { logger } from './logger.js';
 
 let config;
 try {
@@ -10,26 +22,78 @@ try {
   process.exit(1);
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-client.once(Events.ClientReady, (readyClient) => {
-  console.log(`已上線：${readyClient.user.tag}`);
+const database = createDatabase(config);
+try {
+  await migrate(database);
+} catch (error) {
+  logger.error('database_migration_failed', { errorCode: errorCode(error) });
+  await database.end().catch(() => {});
+  process.exit(1);
+}
+
+const commands = await loadCommands();
+const repository = new ActivityRepository(database);
+const tracker = new ActivityTracker(repository, logger);
+const activityService = new ActivityService(repository, tracker, logger);
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  partials: [Partials.Channel, Partials.Message],
 });
-client.on(Events.Error, (error) => console.error(`Discord 連線錯誤：${errorCode(error)}`));
-client.on(Events.InteractionCreate, async (interaction) => {
-  try {
-    await handleInteraction(interaction);
-  } catch (error) {
-    console.error(`指令執行失敗：${errorCode(error)}`);
-    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: '處理失敗，請稍後再試。', flags: MessageFlags.Ephemeral }).catch(() => {});
-    }
-  }
+
+const handleInteraction = createInteractionHandler({
+  commands,
+  context: { activityService },
+  logger,
 });
+
+client.once(Events.ClientReady, async (readyClient) => {
+  await tracker.initializeClient(readyClient);
+  logger.info('bot_ready', { userTag: readyClient.user.tag, guilds: readyClient.guilds.cache.size });
+});
+client.on(Events.Error, (error) => logger.error('discord_error', { errorCode: errorCode(error) }));
+client.on(Events.InteractionCreate, handleInteraction);
+client.on(Events.GuildCreate, (guild) => {
+  tracker.resetAndInitializeGuild(guild, client.user).catch((error) => {
+    logger.error('guild_initialization_failed', { guildId: guild.id, errorCode: errorCode(error) });
+  });
+});
+client.on(Events.MessageCreate, (message) => {
+  tracker.handleMessageCreate(message).catch((error) => {
+    logger.error('message_tracking_failed', {
+      guildId: message.guildId,
+      channelId: message.channelId,
+      errorCode: errorCode(error),
+    });
+  });
+});
+client.on(Events.MessageDelete, (message) => {
+  tracker.handleMessageDelete(message).catch((error) => {
+    logger.error('message_delete_tracking_failed', {
+      guildId: message.guildId,
+      channelId: message.channelId,
+      errorCode: errorCode(error),
+    });
+  });
+});
+client.on(Events.MessageBulkDelete, (messages) => {
+  tracker.handleMessageDeleteBulk(messages).catch((error) => {
+    logger.error('message_bulk_delete_tracking_failed', { errorCode: errorCode(error) });
+  });
+});
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info('bot_shutdown', { signal });
+  client.removeAllListeners();
+  client.destroy();
+  await database.end().catch(() => {});
+}
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, async () => {
-    console.log('正在關閉機器人。');
-    await client.destroy();
+    await shutdown(signal);
     process.exit(0);
   });
 }
@@ -37,7 +101,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 try {
   await client.login(config.DISCORD_TOKEN);
 } catch (error) {
-  console.error(`登入失敗（${errorCode(error)}），請檢查 Bot Token 與網路連線。`);
-  await client.destroy();
+  logger.error('discord_login_failed', { errorCode: errorCode(error) });
+  await shutdown('login_failed');
   process.exitCode = 1;
 }

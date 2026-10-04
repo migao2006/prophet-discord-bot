@@ -1,28 +1,85 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { commands, handleInteraction } from '../src/commands.js';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { execute, data } from '../src/commands/activity/today.js';
+import { loadCommands } from '../src/command-loader.js';
+import { createInteractionHandler } from '../src/interaction-router.js';
 import { readConfig } from '../src/config.js';
-import { countChannelMessages, countTodayMessages, startOfTaipeiDay } from '../src/activity.js';
+import {
+  countChannelMessages,
+  countTodayMessages,
+  startOfTaipeiDay,
+  taipeiDateString,
+} from '../src/activity.js';
+import { ActivityService } from '../src/activity-service.js';
 
-test('missing credentials fail before any network connection', () => {
+test('runtime and registration credentials are validated separately', () => {
   assert.throws(() => readConfig({}), /DISCORD_TOKEN/);
-  assert.throws(() => readConfig({ DISCORD_TOKEN: 'replace_with_bot_token' }), /DISCORD_TOKEN/);
-  assert.throws(() => readConfig({ DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: 'invalid' }, { registration: true }), /DISCORD_APPLICATION_ID/);
+  assert.throws(() => readConfig({ DISCORD_TOKEN: 'test' }), /DATABASE_URL/);
+  assert.throws(
+    () => readConfig({ DISCORD_TOKEN: 'test', DATABASE_URL: 'postgres://test', DATABASE_SSL: 'maybe' }),
+    /DATABASE_SSL/,
+  );
   assert.deepEqual(
-    readConfig({ DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: '1556252999041556582' }, { registration: true }),
+    readConfig({ DISCORD_TOKEN: 'test', DATABASE_URL: 'postgres://test', DATABASE_SSL: 'true' }),
+    { DISCORD_TOKEN: 'test', DATABASE_URL: 'postgres://test', DATABASE_SSL: true },
+  );
+  assert.deepEqual(
+    readConfig(
+      { DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: '1556252999041556582' },
+      { registration: true },
+    ),
     { DISCORD_TOKEN: 'test', DISCORD_APPLICATION_ID: '1556252999041556582' },
   );
 });
 
-test('non-command events are ignored', async () => {
-  await handleInteraction({ isChatInputCommand: () => false });
+test('command loader finds modules and rejects duplicate names', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'prophet-commands-'));
+  try {
+    await mkdir(path.join(directory, 'one'));
+    await writeFile(
+      path.join(directory, 'one', 'a.js'),
+      `export const data={name:'測試',toJSON(){return {name:this.name}}};export async function execute(){}`,
+    );
+    const commands = await loadCommands(directory);
+    assert.deepEqual([...commands.keys()], ['測試']);
+
+    await writeFile(
+      path.join(directory, 'b.js'),
+      `export const data={name:'測試',toJSON(){return {name:this.name}}};export async function execute(){}`,
+    );
+    await assert.rejects(() => loadCommands(directory), /指令名稱重複/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
-test('Taipei day starts at 16:00 UTC on the previous date', () => {
+test('router ignores non-commands and dispatches known commands', async () => {
+  let executed = false;
+  const handler = createInteractionHandler({
+    commands: new Map([['測試', { execute: async () => { executed = true; } }]]),
+    context: {},
+    logger: { info: () => {}, error: () => {} },
+  });
+  await handler({ isChatInputCommand: () => false });
+  assert.equal(executed, false);
+  await handler({
+    isChatInputCommand: () => true,
+    commandName: '測試',
+    guildId: 'guild',
+  });
+  assert.equal(executed, true);
+});
+
+test('Taipei date helpers cross the day boundary at 16:00 UTC', () => {
   assert.equal(
     startOfTaipeiDay(Date.parse('2026-10-04T18:30:00Z')),
     Date.parse('2026-10-04T16:00:00Z'),
   );
+  assert.equal(taipeiDateString(Date.parse('2026-10-04T15:59:59Z')), '2026-10-04');
+  assert.equal(taipeiDateString(Date.parse('2026-10-04T16:00:00Z')), '2026-10-05');
 });
 
 test('message history is paged until the start of the Taipei day', async () => {
@@ -42,7 +99,8 @@ test('message history is paged until the start of the Taipei day', async () => {
     messages: {
       fetch: async (options) => {
         requests.push(options);
-        return new Map((requests.length === 1 ? firstPage : secondPage).map((message) => [message.id, message]));
+        const page = requests.length === 1 ? firstPage : secondPage;
+        return new Map(page.map((message) => [message.id, message]));
       },
     },
   };
@@ -51,7 +109,7 @@ test('message history is paged until the start of the Taipei day', async () => {
   assert.deepEqual(requests, [{ limit: 100 }, { limit: 100, before: '101' }]);
 });
 
-test('today count sums readable channels and reports skipped channels', async () => {
+test('history count sums readable channels and reports skipped channels', async () => {
   const now = Date.parse('2026-10-04T18:30:00Z');
   const message = { id: '1', createdTimestamp: now, author: { id: 'target' } };
   const readableChannel = {
@@ -59,10 +117,7 @@ test('today count sums readable channels and reports skipped channels', async ()
     permissionsFor: () => ({ has: () => true }),
     messages: { fetch: async () => new Map([['1', message]]) },
   };
-  const deniedChannel = {
-    type: 5,
-    permissionsFor: () => ({ has: () => false }),
-  };
+  const deniedChannel = { type: 5, permissionsFor: () => ({ has: () => false }) };
   const failedChannel = {
     type: 0,
     permissionsFor: () => ({ has: () => true }),
@@ -79,41 +134,52 @@ test('today count sums readable channels and reports skipped channels', async ()
   });
 });
 
-test('Chinese activity command requires a user and replies publicly', async () => {
-  assert.deepEqual(commands.map((command) => command.name), ['今日發言']);
-  const definition = commands.find((command) => command.name === '今日發言').toJSON();
+test('activity service uses database only after a complete Taipei day', async () => {
+  const now = Date.parse('2026-10-05T18:30:00Z');
+  const repository = {
+    getTrackingStartedAt: async () => new Date('2026-10-04T12:00:00Z'),
+    countMessages: async (_guild, _user, date, channels) => {
+      assert.equal(date, '2026-10-06');
+      assert.deepEqual(channels, ['channel']);
+      return 7;
+    },
+  };
+  const tracker = {
+    catchUpGuild: async () => ({ readable: [{ id: 'channel' }], skippedChannels: 1 }),
+  };
+  const service = new ActivityService(repository, tracker, { error: () => {} });
+  assert.deepEqual(await service.countToday({ id: 'guild' }, {}, 'user', now), {
+    count: 7,
+    scannedChannels: 1,
+    skippedChannels: 1,
+    source: 'database',
+  });
+});
+
+test('Chinese activity command keeps its native user option and public reply', async () => {
+  const definition = data.toJSON();
+  assert.equal(definition.name, '今日發言');
   assert.equal(definition.options[0].name, '使用者');
-  assert.equal(definition.options[0].required, true);
   assert.equal(definition.options[0].type, 6);
-  assert.equal(definition.options[0].autocomplete, undefined);
+  assert.equal(definition.options[0].required, true);
 
   let deferred = false;
   let reply;
-  const now = Date.now();
   const interaction = {
-    isChatInputCommand: () => true,
-    commandName: '今日發言',
     inGuild: () => true,
     client: { user: { id: 'bot' } },
     options: { getUser: () => ({ id: '123456789012345678' }) },
-    guild: {
-      channels: {
-        fetch: async () => new Map([['a', {
-          type: 0,
-          permissionsFor: () => ({ has: () => true }),
-          messages: {
-            fetch: async () => new Map([['1', { id: '1', createdTimestamp: now, author: { id: '123456789012345678' } }]]),
-          },
-        }]]),
-      },
-    },
+    guild: { id: 'guild' },
     deferReply: async () => { deferred = true; },
     editReply: async (value) => { reply = value; },
   };
+  const activityService = {
+    countToday: async () => ({ count: 3, scannedChannels: 2, skippedChannels: 0 }),
+  };
 
-  await handleInteraction(interaction);
+  await execute(interaction, { activityService });
   assert.equal(deferred, true);
   assert.match(reply.content, /今天（台灣時間）/);
-  assert.match(reply.content, /\*\*1\*\*/);
+  assert.match(reply.content, /\*\*3\*\*/);
   assert.deepEqual(reply.allowedMentions, { parse: [] });
 });

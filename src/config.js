@@ -1,7 +1,7 @@
 export function readConfig(env = process.env, { registration = false } = {}) {
   const required = registration
     ? ['DISCORD_TOKEN', 'DISCORD_APPLICATION_ID']
-    : ['DISCORD_TOKEN'];
+    : ['DISCORD_TOKEN', 'DATABASE_URL'];
   const values = {};
   for (const name of required) {
     const value = env[name]?.trim();
@@ -19,6 +19,13 @@ export function readConfig(env = process.env, { registration = false } = {}) {
       throw new Error('DISCORD_GUILD_ID 必須是 Discord 的數字 ID。');
     }
     values.DISCORD_GUILD_ID = guildId;
+  }
+  if (!registration) {
+    const ssl = env.DATABASE_SSL?.trim().toLowerCase() ?? 'false';
+    if (!['true', 'false'].includes(ssl)) {
+      throw new Error('DATABASE_SSL 必須是 true 或 false。');
+    }
+    values.DATABASE_SSL = ssl === 'true';
   }
   return values;
 }
