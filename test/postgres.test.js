@@ -102,7 +102,10 @@ test('PostgreSQL migration and activity writes are idempotent', {
     );
     assert.equal(serverStats.currentMembers, 2);
     assert.equal(serverStats.activeMembers, 1);
-    assert.equal(serverStats.events.filter((event) => event.event_type === 'join')[0].count, 2);
+    const joined = serverStats.events
+      .filter((event) => event.event_type === 'join')
+      .reduce((sum, event) => sum + event.count, 0);
+    assert.equal(joined, 2);
 
     assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:00:00Z')), true);
     assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:01:00Z')), false);
