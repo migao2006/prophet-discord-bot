@@ -12,13 +12,11 @@ try {
 
 const rest = new REST({ version: '10' }).setToken(config.DISCORD_TOKEN);
 try {
-  // Global commands are available in every server where the bot is installed.
-  for (const command of commands) {
-    await rest.post(Routes.applicationCommands(config.DISCORD_APPLICATION_ID), {
-      body: command.toJSON(),
-    });
-    console.log(`已註冊全域指令 /${command.name}`);
-  }
+  // Replace the complete global command set so removed commands disappear too.
+  await rest.put(Routes.applicationCommands(config.DISCORD_APPLICATION_ID), {
+    body: commands.map((command) => command.toJSON()),
+  });
+  console.log(`已同步 ${commands.length} 個全域指令`);
   // Remove the former test-server commands so Discord does not show stale duplicates.
   if (config.DISCORD_GUILD_ID) {
     await rest.put(

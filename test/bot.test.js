@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MessageFlags } from 'discord.js';
 import { commands, handleInteraction } from '../src/commands.js';
 import { readConfig } from '../src/config.js';
 import { countChannelMessages, countTodayMessages, startOfTaipeiDay } from '../src/activity.js';
@@ -15,24 +14,8 @@ test('missing credentials fail before any network connection', () => {
   );
 });
 
-test('ping responds privately and non-command events are ignored', async () => {
-  let reply;
+test('non-command events are ignored', async () => {
   await handleInteraction({ isChatInputCommand: () => false });
-  await handleInteraction({ isChatInputCommand: () => true, commandName: 'ping', reply: async (value) => { reply = value; } });
-  assert.match(reply.content, /Pong/);
-  assert.equal(reply.flags, MessageFlags.Ephemeral);
-});
-
-test('hello cannot ping everyone through a user-controlled name', async () => {
-  let reply;
-  await handleInteraction({
-    isChatInputCommand: () => true,
-    commandName: 'hello',
-    user: { username: '@everyone' },
-    reply: async (value) => { reply = value; },
-  });
-  assert.match(reply.content, /@everyone/);
-  assert.deepEqual(reply.allowedMentions, { parse: [] });
 });
 
 test('Taipei day starts at 16:00 UTC on the previous date', () => {
@@ -97,10 +80,12 @@ test('today count sums readable channels and reports skipped channels', async ()
 });
 
 test('Chinese activity command requires a user and replies publicly', async () => {
+  assert.deepEqual(commands.map((command) => command.name), ['今日發言']);
   const definition = commands.find((command) => command.name === '今日發言').toJSON();
   assert.equal(definition.options[0].name, '使用者');
   assert.equal(definition.options[0].required, true);
-  assert.equal(definition.options[0].autocomplete, true);
+  assert.equal(definition.options[0].type, 6);
+  assert.equal(definition.options[0].autocomplete, undefined);
 
   let deferred = false;
   let reply;
@@ -110,10 +95,8 @@ test('Chinese activity command requires a user and replies publicly', async () =
     commandName: '今日發言',
     inGuild: () => true,
     client: { user: { id: 'bot' } },
-    options: { getString: () => '123456789012345678' },
-    isAutocomplete: () => false,
+    options: { getUser: () => ({ id: '123456789012345678' }) },
     guild: {
-      members: { fetch: async () => ({ id: '123456789012345678' }) },
       channels: {
         fetch: async () => new Map([['a', {
           type: 0,
@@ -133,31 +116,4 @@ test('Chinese activity command requires a user and replies publicly', async () =
   assert.match(reply.content, /今天（台灣時間）/);
   assert.match(reply.content, /\*\*1\*\*/);
   assert.deepEqual(reply.allowedMentions, { parse: [] });
-});
-
-test('member autocomplete searches the whole guild and returns Discord choices', async () => {
-  let response;
-  const interaction = {
-    isAutocomplete: () => true,
-    commandName: '今日發言',
-    inGuild: () => true,
-    guild: {
-      members: {
-        search: async ({ query, limit }) => {
-          assert.equal(query, 'Pre');
-          assert.equal(limit, 25);
-          return new Map([['123456789012345678', {
-            id: '123456789012345678',
-            displayName: 'Prelude',
-            user: { username: 'baiseq_0309' },
-          }]]);
-        },
-      },
-    },
-    options: { getFocused: () => 'Pre' },
-    respond: async (value) => { response = value; },
-  };
-
-  await handleInteraction(interaction);
-  assert.deepEqual(response, [{ name: 'Prelude (baiseq_0309)', value: '123456789012345678' }]);
 });
