@@ -51,15 +51,18 @@ npm.cmd start
 
 ## Northflank 免費部署
 
-Northflank 的 Developer Sandbox 運算資源本身免費，但目前建立 Service 仍要求新增信用卡作為防濫用驗證。若不希望提供付款方式，可先建立免費 Project，但無法完成 Service 部署。
+Northflank 的 Developer Sandbox 運算資源本身免費，但建立 Service 仍要求新增信用卡作為防濫用驗證。
 
 1. 建立 Northflank Free Project，Deployment target 選 **Northflank Cloud**。
 2. 選擇免費可用的 `us-central` 區域。
-3. 連接此 GitHub 儲存庫，建立 **Combined Service**。
-4. Build type 使用專案根目錄的 `Dockerfile`。
-5. 不建立公開連接埠、網域或 HTTP health check。
-6. 在 Runtime variables / Secrets 加入 `DISCORD_TOKEN`。
-7. 部署後在 Logs 確認出現 `已上線`。
+3. 本儲存庫的 GitHub Actions 會將 `main` 建置為公開映像 `ghcr.io/migao2006/prophet-discord-bot:latest`。
+4. 建立 **Deployment Service**，來源選 **External image**，填入上述映像路徑。
+5. 使用免費的 `nf-compute-10`，維持一個 instance。
+6. 不建立公開連接埠、網域或 HTTP health check。
+7. 在 Runtime variables 加入 `DISCORD_TOKEN`。
+8. 部署後在 Logs 確認出現 `已上線`。
+
+推送新版程式後，GitHub Actions 會更新 `latest` 映像；在 Northflank 重新部署服務即可套用新版。
 
 Application ID 與 Guild ID 只在註冊指令時使用，不需要放入長時間執行的 Northflank Service。修改指令定義後，重新執行 `npm run register`。
 
