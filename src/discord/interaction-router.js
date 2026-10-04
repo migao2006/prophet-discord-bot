@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import { errorCode } from './config.js';
+import { errorCode } from '../core/config.js';
 
 async function sendFailure(interaction) {
   const response = { content: '處理失敗，請稍後再試。', flags: MessageFlags.Ephemeral };

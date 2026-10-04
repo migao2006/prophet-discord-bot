@@ -1,10 +1,11 @@
 import { ChannelType } from 'discord.js';
-import { errorCode } from './config.js';
+import { errorCode } from '../../core/config.js';
+import { KeyedTaskQueue } from '../../core/keyed-task-queue.js';
 import {
   readableActivityChannels,
   startOfTaipeiDay,
   taipeiDateString,
-} from './activity.js';
+} from './domain.js';
 
 const DISCORD_EPOCH = 1_420_070_400_000n;
 
@@ -21,18 +22,12 @@ export class ActivityTracker {
   constructor(repository, logger) {
     this.repository = repository;
     this.logger = logger;
-    this.channelQueues = new Map();
+    this.queue = new KeyedTaskQueue();
     this.initializedGuilds = new Set();
   }
 
   enqueue(channelId, task) {
-    const previous = this.channelQueues.get(channelId) ?? Promise.resolve();
-    const current = previous.catch(() => {}).then(task);
-    this.channelQueues.set(channelId, current);
-    current.finally(() => {
-      if (this.channelQueues.get(channelId) === current) this.channelQueues.delete(channelId);
-    }).catch(() => {});
-    return current;
+    return this.queue.enqueue(channelId, task);
   }
 
   async ensureGuild(guildId, startedAt = new Date()) {

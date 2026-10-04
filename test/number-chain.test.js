@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { NumberChainService } from '../src/number-chain-service.js';
+import { NumberChainService } from '../src/features/games/number-chain/service.js';
 import { data, execute } from '../src/commands/games/number-chain.js';
 
 class MemoryNumberChainRepository {

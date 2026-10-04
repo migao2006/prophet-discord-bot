@@ -7,8 +7,8 @@ import {
   formatVoiceDuration,
   memberActivityWindow,
   summarizeVoiceSessions,
-} from '../src/activity.js';
-import { VoiceTracker } from '../src/voice-tracker.js';
+} from '../src/features/activity/domain.js';
+import { VoiceTracker } from '../src/features/activity/voice-tracker.js';
 
 test('member activity uses 30 Taipei calendar days and formats output', () => {
   const now = Date.parse('2026-10-04T18:30:00Z');

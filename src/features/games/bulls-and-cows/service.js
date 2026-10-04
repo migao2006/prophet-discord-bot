@@ -1,4 +1,4 @@
-import { errorCode } from './config.js';
+import { errorCode } from '../../../core/config.js';
 
 const DIGITS_PATTERN = /^\d+$/;
 const VALID_GUESS_PATTERN = /^\d{4}$/;

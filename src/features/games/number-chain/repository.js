@@ -1,3 +1,9 @@
+import {
+  GAME_TYPE,
+  lockChannelGame,
+  setActiveChannelGame,
+} from '../channel-game-registry.js';
+
 export class NumberChainRepository {
   constructor(pool) {
     this.pool = pool;
@@ -11,20 +17,7 @@ export class NumberChainRepository {
         'INSERT INTO guild_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING',
         [guildId],
       );
-      await client.query(
-        `INSERT INTO channel_games (guild_id, channel_id, active_game)
-         VALUES ($1, $2, NULL)
-         ON CONFLICT DO NOTHING`,
-        [guildId, channelId],
-      );
-      const gameResult = await client.query(
-        `SELECT active_game
-         FROM channel_games
-         WHERE guild_id = $1 AND channel_id = $2
-         FOR UPDATE`,
-        [guildId, channelId],
-      );
-      const activeGame = gameResult.rows[0].active_game;
+      const activeGame = await lockChannelGame(client, guildId, channelId);
       const existing = await client.query(
         `SELECT enabled, current_number
          FROM number_chain_channels
@@ -34,7 +27,7 @@ export class NumberChainRepository {
       );
       const state = existing.rows[0];
 
-      if (enabled && activeGame && activeGame !== 'number_chain') {
+      if (enabled && activeGame && activeGame !== GAME_TYPE.numberChain) {
         await client.query('COMMIT');
         return { changed: false, enabled: false, conflict: activeGame };
       }
@@ -47,12 +40,7 @@ export class NumberChainRepository {
           [guildId, channelId, enabled],
         );
         if (enabled) {
-          await client.query(
-            `UPDATE channel_games
-             SET active_game = 'number_chain', updated_at = now()
-             WHERE guild_id = $1 AND channel_id = $2`,
-            [guildId, channelId],
-          );
+          await setActiveChannelGame(client, guildId, channelId, GAME_TYPE.numberChain);
         }
         await client.query('COMMIT');
         return { changed: enabled, enabled, currentNumber: '0' };
@@ -70,12 +58,7 @@ export class NumberChainRepository {
            WHERE guild_id = $1 AND channel_id = $2`,
           [guildId, channelId],
         );
-        await client.query(
-          `UPDATE channel_games
-           SET active_game = 'number_chain', updated_at = now()
-           WHERE guild_id = $1 AND channel_id = $2`,
-          [guildId, channelId],
-        );
+        await setActiveChannelGame(client, guildId, channelId, GAME_TYPE.numberChain);
       } else {
         await client.query(
           `UPDATE number_chain_channels
@@ -83,13 +66,8 @@ export class NumberChainRepository {
            WHERE guild_id = $1 AND channel_id = $2`,
           [guildId, channelId],
         );
-        if (activeGame === 'number_chain') {
-          await client.query(
-            `UPDATE channel_games
-             SET active_game = NULL, updated_at = now()
-             WHERE guild_id = $1 AND channel_id = $2`,
-            [guildId, channelId],
-          );
+        if (activeGame === GAME_TYPE.numberChain) {
+          await setActiveChannelGame(client, guildId, channelId, null);
         }
       }
       await client.query('COMMIT');

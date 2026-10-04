@@ -4,7 +4,11 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { formatTaipeiActivity, formatVoiceDuration, taipeiDateString } from '../../activity.js';
+import {
+  formatTaipeiActivity,
+  formatVoiceDuration,
+  taipeiDateString,
+} from '../../features/activity/domain.js';
 
 export const data = new SlashCommandBuilder()
   .setName('成員活躍查詢')

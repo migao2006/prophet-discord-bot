@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
-import { migrate } from '../src/migrate.js';
-import { ActivityRepository } from '../src/activity-repository.js';
-import { MemberRepository } from '../src/member-repository.js';
-import { NumberChainRepository } from '../src/number-chain-repository.js';
-import { BullsAndCowsRepository } from '../src/bulls-and-cows-repository.js';
+import { migrate } from '../src/infrastructure/database/migrate.js';
+import { ActivityRepository } from '../src/features/activity/repository.js';
+import { MemberRepository } from '../src/features/members/repository.js';
+import { NumberChainRepository } from '../src/features/games/number-chain/repository.js';
+import { BullsAndCowsRepository } from '../src/features/games/bulls-and-cows/repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 

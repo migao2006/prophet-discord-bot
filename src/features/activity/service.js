@@ -4,8 +4,8 @@ import {
   startOfTaipeiDay,
   summarizeVoiceSessions,
   taipeiDateString,
-} from './activity.js';
-import { errorCode } from './config.js';
+} from './domain.js';
+import { errorCode } from '../../core/config.js';
 
 export class ActivityService {
   constructor(repository, tracker, logger) {

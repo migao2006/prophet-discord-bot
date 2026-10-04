@@ -4,7 +4,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { formatTaipeiActivity, taipeiDateString } from '../../activity.js';
+import { formatTaipeiActivity, taipeiDateString } from '../../features/activity/domain.js';
 
 export const data = new SlashCommandBuilder()
   .setName('伺服器統計')

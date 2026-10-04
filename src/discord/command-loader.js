@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
-const DEFAULT_COMMANDS_DIRECTORY = path.join(import.meta.dirname, 'commands');
+const DEFAULT_COMMANDS_DIRECTORY = path.join(import.meta.dirname, '..', 'commands');
 
 async function findJavaScriptFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

@@ -1,4 +1,4 @@
-import { errorCode } from './config.js';
+import { errorCode } from '../../../core/config.js';
 
 const DIGITS_PATTERN = /^\d+$/;
 const POSITIVE_INTEGER_PATTERN = /^[1-9]\d*$/;

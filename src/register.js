@@ -1,6 +1,6 @@
 import { REST, Routes } from 'discord.js';
-import { readConfig, errorCode } from './config.js';
-import { loadCommands } from './command-loader.js';
+import { readConfig, errorCode } from './core/config.js';
+import { loadCommands } from './discord/command-loader.js';
 
 let config;
 try {

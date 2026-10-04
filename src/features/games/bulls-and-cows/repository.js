@@ -1,21 +1,9 @@
-import { evaluateGuess, generateSecret } from './bulls-and-cows.js';
-
-async function lockChannelGame(client, guildId, channelId) {
-  await client.query(
-    `INSERT INTO channel_games (guild_id, channel_id, active_game)
-     VALUES ($1, $2, NULL)
-     ON CONFLICT DO NOTHING`,
-    [guildId, channelId],
-  );
-  const result = await client.query(
-    `SELECT active_game
-     FROM channel_games
-     WHERE guild_id = $1 AND channel_id = $2
-     FOR UPDATE`,
-    [guildId, channelId],
-  );
-  return result.rows[0].active_game;
-}
+import { evaluateGuess, generateSecret } from './game.js';
+import {
+  GAME_TYPE,
+  lockChannelGame,
+  setActiveChannelGame,
+} from '../channel-game-registry.js';
 
 export class BullsAndCowsRepository {
   constructor(pool, secretGenerator = generateSecret) {
@@ -41,12 +29,12 @@ export class BullsAndCowsRepository {
       );
       const state = existing.rows[0];
 
-      if (enabled && activeGame && activeGame !== 'bulls_and_cows') {
+      if (enabled && activeGame && activeGame !== GAME_TYPE.bullsAndCows) {
         await client.query('COMMIT');
         return { changed: false, enabled: false, conflict: activeGame };
       }
 
-      if (enabled && activeGame === 'bulls_and_cows' && state?.enabled) {
+      if (enabled && activeGame === GAME_TYPE.bullsAndCows && state?.enabled) {
         await client.query('COMMIT');
         return { changed: false, enabled: true, guessCount: state.guess_count };
       }
@@ -62,12 +50,7 @@ export class BullsAndCowsRepository {
                guess_count = 0, updated_at = now()`,
           [guildId, channelId, secret],
         );
-        await client.query(
-          `UPDATE channel_games
-           SET active_game = 'bulls_and_cows', updated_at = now()
-           WHERE guild_id = $1 AND channel_id = $2`,
-          [guildId, channelId],
-        );
+        await setActiveChannelGame(client, guildId, channelId, GAME_TYPE.bullsAndCows);
         await client.query('COMMIT');
         return { changed: true, enabled: true, guessCount: 0 };
       }
@@ -81,13 +64,8 @@ export class BullsAndCowsRepository {
           [guildId, channelId],
         );
       }
-      if (activeGame === 'bulls_and_cows') {
-        await client.query(
-          `UPDATE channel_games
-           SET active_game = NULL, updated_at = now()
-           WHERE guild_id = $1 AND channel_id = $2`,
-          [guildId, channelId],
-        );
+      if (activeGame === GAME_TYPE.bullsAndCows) {
+        await setActiveChannelGame(client, guildId, channelId, null);
       }
       await client.query('COMMIT');
       return { changed, enabled: false };

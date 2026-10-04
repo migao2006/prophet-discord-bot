@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConnectionString } from '../src/database.js';
+import { normalizeConnectionString } from '../src/infrastructure/database/client.js';
 
 test('removes connection-string SSL modes when explicit TLS is enabled', () => {
   const result = normalizeConnectionString(

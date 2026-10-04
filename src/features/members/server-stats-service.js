@@ -1,4 +1,4 @@
-import { memberActivityWindow } from './activity.js';
+import { memberActivityWindow } from '../activity/domain.js';
 
 export function serverStatsWindow(now = Date.now()) {
   return memberActivityWindow(now);

@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { evaluateGuess, generateSecret } from '../src/bulls-and-cows.js';
-import { BullsAndCowsService } from '../src/bulls-and-cows-service.js';
+import {
+  evaluateGuess,
+  generateSecret,
+} from '../src/features/games/bulls-and-cows/game.js';
+import { BullsAndCowsService } from '../src/features/games/bulls-and-cows/service.js';
 import { data, execute } from '../src/commands/games/bulls-and-cows.js';
 
 class MemoryBullsAndCowsRepository {

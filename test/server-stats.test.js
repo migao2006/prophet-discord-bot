@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PermissionFlagsBits } from 'discord.js';
-import { MemberTracker } from '../src/member-tracker.js';
-import { ServerStatsService, serverStatsWindow } from '../src/server-stats.js';
+import { MemberTracker } from '../src/features/members/tracker.js';
+import {
+  ServerStatsService,
+  serverStatsWindow,
+} from '../src/features/members/server-stats-service.js';
 import { data, execute } from '../src/commands/activity/server-stats.js';
 
 test('server stats window starts on the first of 30 Taipei calendar days', () => {

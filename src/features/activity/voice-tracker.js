@@ -1,4 +1,4 @@
-import { errorCode } from './config.js';
+import { errorCode } from '../../core/config.js';
 
 const HEARTBEAT_MS = 5 * 60 * 1_000;
 

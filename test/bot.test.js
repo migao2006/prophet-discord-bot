@@ -4,16 +4,16 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execute, data } from '../src/commands/activity/today.js';
-import { loadCommands } from '../src/command-loader.js';
-import { createInteractionHandler } from '../src/interaction-router.js';
-import { readConfig } from '../src/config.js';
+import { loadCommands } from '../src/discord/command-loader.js';
+import { createInteractionHandler } from '../src/discord/interaction-router.js';
+import { readConfig } from '../src/core/config.js';
 import {
   countChannelMessages,
   countTodayMessages,
   startOfTaipeiDay,
   taipeiDateString,
-} from '../src/activity.js';
-import { ActivityService } from '../src/activity-service.js';
+} from '../src/features/activity/domain.js';
+import { ActivityService } from '../src/features/activity/service.js';
 
 test('runtime and registration credentials are validated separately', () => {
   assert.throws(() => readConfig({}), /DISCORD_TOKEN/);
