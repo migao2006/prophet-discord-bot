@@ -57,11 +57,6 @@ export async function execute(interaction, { serverStatsService }) {
         value: `**${signed(result.netGrowth)}** 人（${formatRate(result.growthRate)}）`,
         inline: true,
       },
-      {
-        name: '成長趨勢',
-        value: `新增　${result.joinsTrend}\n離開　${result.leavesTrend}`,
-        inline: false,
-      },
     )
     .setFooter({
       text: `${taipeiDateString(result.startAt).replaceAll('-', '/')}～${taipeiDateString(result.endAt).replaceAll('-', '/')}（台灣時間）${notes.length ? `｜${notes.join('｜')}` : ''}`,

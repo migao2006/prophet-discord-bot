@@ -2,16 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PermissionFlagsBits } from 'discord.js';
 import { MemberTracker } from '../src/member-tracker.js';
-import { renderTrend, ServerStatsService, serverStatsWindow } from '../src/server-stats.js';
+import { ServerStatsService, serverStatsWindow } from '../src/server-stats.js';
 import { data, execute } from '../src/commands/activity/server-stats.js';
 
-test('server stats window contains 30 Taipei dates and renders trends', () => {
+test('server stats window starts on the first of 30 Taipei calendar days', () => {
   const window = serverStatsWindow(Date.parse('2026-10-05T18:00:00Z'));
-  assert.equal(window.dates.length, 30);
-  assert.equal(window.dates[0], '2026-09-07');
-  assert.equal(window.dates.at(-1), '2026-10-06');
-  assert.equal(renderTrend(Array(30).fill(0)), '▁'.repeat(30));
-  assert.equal(renderTrend([0, 1, 2]), '▁▅█');
+  assert.equal(window.startDate, '2026-09-07');
 });
 
 test('member tracker excludes bots when synchronizing the roster', async () => {
@@ -90,8 +86,6 @@ test('server stats command is administrator-only and returns a public embed', as
         sleepingMembers: 40,
         netGrowth: 10,
         growthRate: 10 / 90 * 100,
-        joinsTrend: '▁'.repeat(30),
-        leavesTrend: '▁'.repeat(30),
         trackingStartedAt: now,
         complete: false,
         skippedChannels: 0,
@@ -106,6 +100,6 @@ test('server stats command is administrator-only and returns a public embed', as
   assert.match(embed.description, /測試伺服器/);
   assert.match(embed.fields[1].value, /\+12/);
   assert.match(embed.fields[5].value, /\+10/);
-  assert.match(embed.fields[6].value, /新增/);
+  assert.equal(embed.fields.length, 6);
   assert.deepEqual(reply.allowedMentions, { parse: [] });
 });
