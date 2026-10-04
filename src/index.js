@@ -16,6 +16,8 @@ import { VoiceTracker } from './voice-tracker.js';
 import { MemberRepository } from './member-repository.js';
 import { MemberTracker } from './member-tracker.js';
 import { ServerStatsService } from './server-stats.js';
+import { NumberChainRepository } from './number-chain-repository.js';
+import { NumberChainService } from './number-chain-service.js';
 import { logger } from './logger.js';
 
 let config;
@@ -43,10 +45,13 @@ const voiceTracker = new VoiceTracker(repository, logger);
 const memberTracker = new MemberTracker(memberRepository, logger);
 const activityService = new ActivityService(repository, tracker, logger);
 const serverStatsService = new ServerStatsService(memberRepository, tracker);
+const numberChainRepository = new NumberChainRepository(database);
+const numberChainService = new NumberChainService(numberChainRepository, logger);
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildVoiceStates,
   ],
@@ -55,7 +60,7 @@ const client = new Client({
 
 const handleInteraction = createInteractionHandler({
   commands,
-  context: { activityService, serverStatsService },
+  context: { activityService, serverStatsService, numberChainRepository },
   logger,
 });
 
@@ -109,6 +114,13 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 client.on(Events.MessageCreate, (message) => {
   tracker.handleMessageCreate(message).catch((error) => {
     logger.error('message_tracking_failed', {
+      guildId: message.guildId,
+      channelId: message.channelId,
+      errorCode: errorCode(error),
+    });
+  });
+  numberChainService.handleMessage(message).catch((error) => {
+    logger.error('number_chain_failed', {
       guildId: message.guildId,
       channelId: message.channelId,
       errorCode: errorCode(error),

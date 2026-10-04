@@ -4,6 +4,7 @@ import pg from 'pg';
 import { migrate } from '../src/migrate.js';
 import { ActivityRepository } from '../src/activity-repository.js';
 import { MemberRepository } from '../src/member-repository.js';
+import { NumberChainRepository } from '../src/number-chain-repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -109,6 +110,25 @@ test('PostgreSQL migration and activity writes are idempotent', {
 
     assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:00:00Z')), true);
     assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:01:00Z')), false);
+
+    const numberChain = new NumberChainRepository(pool);
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: true,
+      enabled: true,
+      currentNumber: '0',
+    });
+    const concurrent = await Promise.all([
+      numberChain.tryAdvance(guildId, 'game', 'player-a', 1n),
+      numberChain.tryAdvance(guildId, 'game', 'player-b', 1n),
+    ]);
+    assert.equal(concurrent.filter((result) => result.status === 'correct').length, 1);
+    assert.equal(concurrent.filter((result) => result.status === 'incorrect').length, 1);
+    assert.equal((await numberChain.setEnabled(guildId, 'game', false)).changed, true);
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: true,
+      enabled: true,
+      currentNumber: '0',
+    });
   } finally {
     await pool.end();
   }
