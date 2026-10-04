@@ -36,6 +36,24 @@ export class NumberChainService {
         errorCode: errorCode(error),
       });
     }
+    if (result.status === 'incorrect') {
+      const content = result.reason === 'same_user'
+        ? '不能自己接自己啦～🐾 接龍已重新開始，下一位請輸入 **1**！'
+        : '哎呀，數字接錯了啦～💥 接龍已重新開始，下一位請輸入 **1**！🌱';
+      try {
+        await message.reply({
+          content,
+          allowedMentions: { parse: [], repliedUser: false },
+        });
+      } catch (error) {
+        this.logger.error('number_chain_hint_failed', {
+          guildId: message.guildId,
+          channelId: message.channelId,
+          messageId: message.id,
+          errorCode: errorCode(error),
+        });
+      }
+    }
     return result;
   }
 }

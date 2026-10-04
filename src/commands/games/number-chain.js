@@ -7,6 +7,7 @@ import {
 
 const REQUIRED_BOT_PERMISSIONS = [
   PermissionFlagsBits.ViewChannel,
+  PermissionFlagsBits.SendMessages,
   PermissionFlagsBits.ReadMessageHistory,
   PermissionFlagsBits.AddReactions,
 ];
@@ -45,7 +46,7 @@ export async function execute(interaction, { numberChainRepository }) {
   if (enabled && interaction.appPermissions
     && !interaction.appPermissions.has(REQUIRED_BOT_PERMISSIONS)) {
     await interaction.reply({
-      content: '機器人在這個頻道需要「檢視頻道」、「讀取訊息歷史記錄」與「新增反應」權限。',
+      content: '差一點點就能開玩啦～🔧 請先給我「檢視頻道」、「傳送訊息」、「讀取訊息歷史記錄」與「新增反應」權限。',
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -57,10 +58,10 @@ export async function execute(interaction, { numberChainRepository }) {
     enabled,
   );
   let content;
-  if (enabled && result.changed) content = '已在這個頻道開啟數字接龍，請從 **1** 開始。';
-  else if (enabled) content = `這個頻道已開啟數字接龍，下一個數字是 **${BigInt(result.currentNumber) + 1n}**。`;
-  else if (result.changed) content = '已關閉這個頻道的數字接龍。';
-  else content = '這個頻道目前沒有開啟數字接龍。';
+  if (enabled && result.changed) content = '數字接龍開張啦～🎉 請從 **1** 開始，一起把數字接高高吧！';
+  else if (enabled) content = `遊戲已經在進行中囉～🎮 下一個數字是 **${BigInt(result.currentNumber) + 1n}**。`;
+  else if (result.changed) content = '數字接龍先休息一下啦～🌙 已關閉這個頻道的遊戲。';
+  else content = '這個頻道目前沒有開啟數字接龍唷～🍃';
 
   await interaction.reply({ content, flags: MessageFlags.Ephemeral });
 }

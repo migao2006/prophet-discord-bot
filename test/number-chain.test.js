@@ -17,9 +17,10 @@ class MemoryNumberChainRepository {
     if (!this.enabled) return { status: 'disabled' };
     const expected = this.current + 1n;
     if (number !== expected || userId === this.lastUserId) {
+      const reason = userId === this.lastUserId ? 'same_user' : 'wrong_number';
       this.current = 0n;
       this.lastUserId = null;
-      return { status: 'incorrect', expected: '1' };
+      return { status: 'incorrect', reason, expected: '1' };
     }
     this.current = number;
     this.lastUserId = userId;
@@ -29,6 +30,7 @@ class MemoryNumberChainRepository {
 
 function createMessage(content, userId = 'user') {
   const reactions = [];
+  const replies = [];
   return {
     id: `message-${content}`,
     content,
@@ -36,7 +38,9 @@ function createMessage(content, userId = 'user') {
     channelId: 'channel',
     author: { id: userId, bot: false },
     react: async (emoji) => reactions.push(emoji),
+    reply: async (value) => replies.push(value),
     reactions,
+    replies,
   };
 }
 
@@ -66,10 +70,13 @@ test('number chain reacts to valid and invalid numbers while ignoring text', asy
   const sameUser = createMessage('2', 'a');
   assert.equal((await service.handleMessage(sameUser)).status, 'incorrect');
   assert.deepEqual(sameUser.reactions, ['❌']);
+  assert.match(sameUser.replies[0].content, /不能自己接自己/);
+  assert.deepEqual(sameUser.replies[0].allowedMentions, { parse: [], repliedUser: false });
 
   const skipped = createMessage('3', 'b');
   assert.equal((await service.handleMessage(skipped)).status, 'incorrect');
   assert.deepEqual(skipped.reactions, ['❌']);
+  assert.match(skipped.replies[0].content, /數字接錯了/);
 
   const restarted = createMessage('1', 'b');
   assert.equal((await service.handleMessage(restarted)).status, 'correct');
@@ -123,6 +130,7 @@ test('number chain command configures only the current text channel with an ephe
   assert.deepEqual(saved, ['guild', 'channel', true]);
   assert.equal(reply.flags, MessageFlags.Ephemeral);
   assert.match(reply.content, /從 \*\*1\*\* 開始/);
+  assert.match(reply.content, /🎉/);
 });
 
 test('number chain command rejects non-administrators', async () => {

@@ -80,6 +80,7 @@ export class NumberChainRepository {
 
       const expected = BigInt(state.current_number) + 1n;
       if (number !== expected || state.last_user_id === userId) {
+        const reason = state.last_user_id === userId ? 'same_user' : 'wrong_number';
         await client.query(
           `UPDATE number_chain_channels
            SET current_number = 0, last_user_id = NULL, updated_at = now()
@@ -87,7 +88,7 @@ export class NumberChainRepository {
           [guildId, channelId],
         );
         await client.query('COMMIT');
-        return { status: 'incorrect', expected: '1' };
+        return { status: 'incorrect', reason, expected: '1' };
       }
 
       await client.query(
