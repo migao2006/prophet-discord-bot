@@ -18,6 +18,8 @@ import { MemberTracker } from './member-tracker.js';
 import { ServerStatsService } from './server-stats.js';
 import { NumberChainRepository } from './number-chain-repository.js';
 import { NumberChainService } from './number-chain-service.js';
+import { BullsAndCowsRepository } from './bulls-and-cows-repository.js';
+import { BullsAndCowsService } from './bulls-and-cows-service.js';
 import { logger } from './logger.js';
 
 let config;
@@ -47,6 +49,8 @@ const activityService = new ActivityService(repository, tracker, logger);
 const serverStatsService = new ServerStatsService(memberRepository, tracker);
 const numberChainRepository = new NumberChainRepository(database);
 const numberChainService = new NumberChainService(numberChainRepository, logger);
+const bullsAndCowsRepository = new BullsAndCowsRepository(database);
+const bullsAndCowsService = new BullsAndCowsService(bullsAndCowsRepository, logger);
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -60,7 +64,12 @@ const client = new Client({
 
 const handleInteraction = createInteractionHandler({
   commands,
-  context: { activityService, serverStatsService, numberChainRepository },
+  context: {
+    activityService,
+    serverStatsService,
+    numberChainRepository,
+    bullsAndCowsRepository,
+  },
   logger,
 });
 
@@ -121,6 +130,13 @@ client.on(Events.MessageCreate, (message) => {
   });
   numberChainService.handleMessage(message).catch((error) => {
     logger.error('number_chain_failed', {
+      guildId: message.guildId,
+      channelId: message.channelId,
+      errorCode: errorCode(error),
+    });
+  });
+  bullsAndCowsService.handleMessage(message).catch((error) => {
+    logger.error('bulls_and_cows_failed', {
       guildId: message.guildId,
       channelId: message.channelId,
       errorCode: errorCode(error),

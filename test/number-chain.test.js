@@ -146,3 +146,27 @@ test('number chain command rejects non-administrators', async () => {
   assert.match(reply.content, /只有伺服器管理員/);
   assert.equal(reply.flags, MessageFlags.Ephemeral);
 });
+
+test('number chain command reports a 1A2B conflict', async () => {
+  let reply;
+  const interaction = {
+    inGuild: () => true,
+    guild: { id: 'guild' },
+    guildId: 'guild',
+    channelId: 'channel',
+    channel: { type: ChannelType.GuildText },
+    memberPermissions: { has: () => true },
+    appPermissions: { has: () => true },
+    options: { getString: () => '開啟' },
+    reply: async (value) => { reply = value; },
+  };
+  await execute(interaction, {
+    numberChainRepository: {
+      setEnabled: async () => ({
+        changed: false, enabled: false, conflict: 'bulls_and_cows',
+      }),
+    },
+  });
+  assert.match(reply.content, /1A2B/);
+  assert.match(reply.content, /幾a幾b/);
+});

@@ -5,6 +5,7 @@ import { migrate } from '../src/migrate.js';
 import { ActivityRepository } from '../src/activity-repository.js';
 import { MemberRepository } from '../src/member-repository.js';
 import { NumberChainRepository } from '../src/number-chain-repository.js';
+import { BullsAndCowsRepository } from '../src/bulls-and-cows-repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -117,6 +118,13 @@ test('PostgreSQL migration and activity writes are idempotent', {
       enabled: true,
       currentNumber: '0',
     });
+    const secrets = ['0123', '4567', '8901'];
+    const bullsAndCows = new BullsAndCowsRepository(pool, () => secrets.shift() ?? '2345');
+    assert.deepEqual(await bullsAndCows.setEnabled(guildId, 'game', true), {
+      changed: false,
+      enabled: false,
+      conflict: 'number_chain',
+    });
     const concurrent = await Promise.all([
       numberChain.tryAdvance(guildId, 'game', 'player-a', 1n),
       numberChain.tryAdvance(guildId, 'game', 'player-b', 1n),
@@ -128,11 +136,48 @@ test('PostgreSQL migration and activity writes are idempotent', {
       'correct',
     );
     assert.equal((await numberChain.setEnabled(guildId, 'game', false)).changed, true);
+    assert.deepEqual(await bullsAndCows.setEnabled(guildId, 'game', true), {
+      changed: true,
+      enabled: true,
+      guessCount: 0,
+    });
+    assert.deepEqual(await bullsAndCows.submitGuess(guildId, 'game', '1038'), {
+      status: 'guessed',
+      a: 0,
+      b: 3,
+      attempt: 1,
+    });
+    assert.equal((await bullsAndCows.submitGuess(guildId, 'game', null)).status, 'invalid');
+    assert.deepEqual(await bullsAndCows.submitGuess(guildId, 'game', '0123'), {
+      status: 'won',
+      a: 4,
+      b: 0,
+      attempt: 2,
+      answer: '0123',
+    });
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: false,
+      enabled: false,
+      conflict: 'bulls_and_cows',
+    });
+    assert.equal((await bullsAndCows.setEnabled(guildId, 'game', false)).changed, true);
     assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
       changed: true,
       enabled: true,
       currentNumber: '0',
     });
+
+    const raceResults = await Promise.all([
+      numberChain.setEnabled(guildId, 'race-game', true),
+      bullsAndCows.setEnabled(guildId, 'race-game', true),
+    ]);
+    assert.equal(raceResults.filter((result) => result.changed && result.enabled).length, 1);
+    assert.equal(raceResults.filter((result) => result.conflict).length, 1);
+    if (raceResults[0].enabled) {
+      await numberChain.setEnabled(guildId, 'race-game', false);
+    } else {
+      await bullsAndCows.setEnabled(guildId, 'race-game', false);
+    }
   } finally {
     await pool.end();
   }
