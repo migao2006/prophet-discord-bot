@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import { migrate } from '../src/migrate.js';
 import { ActivityRepository } from '../src/activity-repository.js';
+import { MemberRepository } from '../src/member-repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -78,6 +79,33 @@ test('PostgreSQL migration and activity writes are idempotent', {
     );
     assert.equal(activity.voiceSessions.length, 1);
     assert.equal(activity.voiceSessions[0].channel_id, 'voice');
+
+    const members = new MemberRepository(pool);
+    const syncedAt = new Date('2026-10-04T04:00:00Z');
+    const initial = await members.syncMembers(guildId, [
+      { userId: 'user', joinedAt: new Date('2026-10-01T00:00:00Z') },
+      { userId: 'sleeper', joinedAt: new Date('2026-10-02T00:00:00Z') },
+    ], new Date('2026-09-05T16:00:00Z'), syncedAt);
+    assert.deepEqual(initial, { members: 2, joined: 2, left: 0, firstSync: true });
+
+    await repository.recordMessage({
+      ...message,
+      messageId: `active-${Date.now()}`,
+      createdAt: new Date('2026-10-04T04:30:00Z'),
+    });
+    const serverStats = await members.getServerStats(
+      guildId,
+      '2026-09-06',
+      new Date('2026-09-05T16:00:00Z'),
+      new Date('2026-10-05T00:00:00Z'),
+      ['channel'],
+    );
+    assert.equal(serverStats.currentMembers, 2);
+    assert.equal(serverStats.activeMembers, 1);
+    assert.equal(serverStats.events.filter((event) => event.event_type === 'join')[0].count, 2);
+
+    assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:00:00Z')), true);
+    assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:01:00Z')), false);
   } finally {
     await pool.end();
   }
