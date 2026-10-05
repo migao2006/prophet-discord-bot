@@ -16,6 +16,7 @@ import { IdiomChainRepository } from '../features/games/idiom-chain/repository.j
 import { IdiomChainService } from '../features/games/idiom-chain/service.js';
 import { OpenBookQuizRepository } from '../features/games/open-book-quiz/repository.js';
 import { OpenBookQuizService } from '../features/games/open-book-quiz/service.js';
+import { FunImageService } from '../features/fun-images/service.js';
 import { registerBotEvents } from './register-events.js';
 
 const INTENTS = [
@@ -42,6 +43,7 @@ export async function createBot({ database, logger }) {
   const idiomChainService = new IdiomChainService(idiomChainRepository, logger);
   const openBookQuizRepository = new OpenBookQuizRepository(database);
   const openBookQuizService = new OpenBookQuizService(openBookQuizRepository, logger);
+  const funImageService = new FunImageService({ logger });
   const commands = await loadCommands();
   const client = new Client({
     intents: INTENTS,
@@ -57,6 +59,7 @@ export async function createBot({ database, logger }) {
       idiomChainRepository,
       openBookQuizRepository,
       openBookQuizService,
+      funImageService,
     },
     logger,
   });

@@ -9,6 +9,8 @@
 - `/幾a幾b 狀態:開啟|關閉`：限管理員使用；開啟後成員直接輸入四個不重複的數字，全頻道共同破解答案，猜中後自動開始下一局。
 - `/成語接龍 狀態:開啟|關閉`：限管理員使用；由機器人隨機出題，成員直接輸入四字成語，以相同漢字接龍，同一位成員不能連續作答。
 - `/開卷有益 狀態:開啟|關閉 科目:全部|國文|英文|數學|社會|自然`：所有成員都能開啟無限時四選一問答；每人每題只能回答一次，答對後自動換題。只有開啟者或管理員能關閉。
+- `/隨機料理`：從 TheMealDB 隨機取得一張料理圖片。
+- `/隨機貓咪`：從 The Cat API 隨機取得一張貓咪圖片。
 - 同一個頻道一次只能開啟數字接龍、1A2B、成語接龍或開卷有益其中一種遊戲。
 
 機器人透過 Discord Gateway 主動連線，不需要網域、HTTP 伺服器或公開連接埠。程式採用模組化指令、服務層與資料存取層，方便繼續增加功能。
@@ -101,7 +103,7 @@ docker build -t prophet-discord-bot .
 
 設定 `TEST_DATABASE_URL` 後，`npm test` 也會執行真實 PostgreSQL migration、去重與刪除回減測試；未設定時只略過這一項整合測試。
 
-部署後由伺服器管理者自行測試 `/今日發言`、`/成員活躍查詢`、`/伺服器統計`、`/數字接龍`、`/幾a幾b`、`/成語接龍` 與 `/開卷有益`。若統計略過頻道，確認 Bot 在該頻道具有 View Channel 與 Read Message History；若訊息型頻道遊戲沒有反應，確認 Message Content Intent 已開啟；需要反應符號的遊戲另需 Add Reactions，開卷有益需 Embed Links。若指令逾時，檢查 Northflank Logs、資料庫連線與 Bot Token。
+部署後由伺服器管理者自行測試 `/今日發言`、`/成員活躍查詢`、`/伺服器統計`、四種頻道遊戲、`/隨機料理` 與 `/隨機貓咪`。若統計略過頻道，確認 Bot 在該頻道具有 View Channel 與 Read Message History；若訊息型頻道遊戲沒有反應，確認 Message Content Intent 已開啟；需要反應符號的遊戲另需 Add Reactions，圖片與問答功能需 Embed Links。若指令逾時，檢查 Northflank Logs、資料庫連線與 Bot Token。
 
 ## 安全性
 

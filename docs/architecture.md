@@ -11,6 +11,7 @@ src/
 ├─ features/
 │  ├─ activity/            # 文字與語音活動統計
 │  ├─ members/             # 成員名冊與伺服器統計
+│  ├─ fun-images/          # 外部趣味圖片 API、驗證與冷卻
 │  └─ games/               # 頻道遊戲與共用遊戲鎖
 └─ infrastructure/
    └─ database/            # PostgreSQL client、migration runner 與 SQL
