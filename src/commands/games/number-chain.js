@@ -60,6 +60,7 @@ export async function execute(interaction, { numberChainRepository }) {
   let content;
   if (result.conflict === 'bulls_and_cows') content = '這個頻道正在破解 1A2B 唷～🔐 請先用 `/幾a幾b 狀態:關閉`，再開啟數字接龍。';
   else if (result.conflict === 'idiom_chain') content = '這個頻道正在玩成語接龍唷～📚 請先用 `/成語接龍 狀態:關閉`，再開啟數字接龍。';
+  else if (result.conflict === 'open_book_quiz') content = '這個頻道正在玩開卷有益唷～📖 請先用 `/開卷有益 狀態:關閉`，再開啟數字接龍。';
   else if (enabled && result.changed) content = '數字接龍開張啦～🎉 請從 **1** 開始，一起把數字接高高吧！';
   else if (enabled) content = `遊戲已經在進行中囉～🎮 下一個數字是 **${BigInt(result.currentNumber) + 1n}**。`;
   else if (result.changed) content = '數字接龍先休息一下啦～🌙 已關閉這個頻道的遊戲。';

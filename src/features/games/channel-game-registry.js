@@ -2,6 +2,7 @@ export const GAME_TYPE = Object.freeze({
   numberChain: 'number_chain',
   bullsAndCows: 'bulls_and_cows',
   idiomChain: 'idiom_chain',
+  openBookQuiz: 'open_book_quiz',
 });
 
 export async function lockChannelGame(client, guildId, channelId) {

@@ -61,6 +61,8 @@ export async function execute(interaction, { bullsAndCowsRepository }) {
     content = '這個頻道正在玩數字接龍唷～🎲 請先用 `/數字接龍 狀態:關閉`，再開啟 1A2B。';
   } else if (result.conflict === 'idiom_chain') {
     content = '這個頻道正在玩成語接龍唷～📚 請先用 `/成語接龍 狀態:關閉`，再開啟 1A2B。';
+  } else if (result.conflict === 'open_book_quiz') {
+    content = '這個頻道正在玩開卷有益唷～📖 請先用 `/開卷有益 狀態:關閉`，再開啟 1A2B。';
   } else if (enabled && result.changed) {
     content = '密碼已經藏好啦～🔐 請直接輸入 **4 個不重複的數字**，一起來破解 1A2B 吧！';
   } else if (enabled) {

@@ -14,6 +14,8 @@ import { BullsAndCowsRepository } from '../features/games/bulls-and-cows/reposit
 import { BullsAndCowsService } from '../features/games/bulls-and-cows/service.js';
 import { IdiomChainRepository } from '../features/games/idiom-chain/repository.js';
 import { IdiomChainService } from '../features/games/idiom-chain/service.js';
+import { OpenBookQuizRepository } from '../features/games/open-book-quiz/repository.js';
+import { OpenBookQuizService } from '../features/games/open-book-quiz/service.js';
 import { registerBotEvents } from './register-events.js';
 
 const INTENTS = [
@@ -38,6 +40,8 @@ export async function createBot({ database, logger }) {
   const bullsAndCowsService = new BullsAndCowsService(bullsAndCowsRepository, logger);
   const idiomChainRepository = new IdiomChainRepository(database);
   const idiomChainService = new IdiomChainService(idiomChainRepository, logger);
+  const openBookQuizRepository = new OpenBookQuizRepository(database);
+  const openBookQuizService = new OpenBookQuizService(openBookQuizRepository, logger);
   const commands = await loadCommands();
   const client = new Client({
     intents: INTENTS,
@@ -51,6 +55,8 @@ export async function createBot({ database, logger }) {
       numberChainRepository,
       bullsAndCowsRepository,
       idiomChainRepository,
+      openBookQuizRepository,
+      openBookQuizService,
     },
     logger,
   });
@@ -63,6 +69,7 @@ export async function createBot({ database, logger }) {
     numberChainService,
     bullsAndCowsService,
     idiomChainService,
+    openBookQuizService,
     logger,
   });
 

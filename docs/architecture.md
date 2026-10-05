@@ -39,3 +39,7 @@ src/
 成語接龍的教育部詞庫放在 `data/`，由可重複執行的轉換腳本從官方 XLSX
 產生。資料庫 migration 只建立 schema；`seed-idioms.js` 在 Discord 登入前以
 來源版本為鍵執行冪等匯入，避免 migration 內嵌大量第三方資料。
+
+開卷有益的會考題庫也放在 `data/`，由固定的上游 commit 轉換成純文字四選一格式；
+`seed-open-book-questions.js` 使用獨立 advisory lock 匯入。按鈕 interaction 由 router
+分派至遊戲服務，頻道狀態與作答去重由 PostgreSQL transaction 保護。

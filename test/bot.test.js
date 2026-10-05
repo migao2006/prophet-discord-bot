@@ -73,6 +73,25 @@ test('router ignores non-commands and dispatches known commands', async () => {
   assert.equal(executed, true);
 });
 
+test('router dispatches open-book buttons without treating them as commands', async () => {
+  let handled = false;
+  const handler = createInteractionHandler({
+    commands: new Map(),
+    context: {
+      openBookQuizService: {
+        handleButton: async () => { handled = true; return true; },
+      },
+    },
+    logger: { info: () => {}, error: () => {} },
+  });
+  await handler({
+    isButton: () => true,
+    customId: 'openbook:1:0',
+    guildId: 'guild',
+  });
+  assert.equal(handled, true);
+});
+
 test('Taipei date helpers cross the day boundary at 16:00 UTC', () => {
   assert.equal(
     startOfTaipeiDay(Date.parse('2026-10-04T18:30:00Z')),

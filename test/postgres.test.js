@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import { migrate } from '../src/infrastructure/database/migrate.js';
 import { seedIdioms } from '../src/infrastructure/database/seed-idioms.js';
+import { seedOpenBookQuestions } from '../src/infrastructure/database/seed-open-book-questions.js';
 import { ActivityRepository } from '../src/features/activity/repository.js';
 import { MemberRepository } from '../src/features/members/repository.js';
 import { NumberChainRepository } from '../src/features/games/number-chain/repository.js';
 import { BullsAndCowsRepository } from '../src/features/games/bulls-and-cows/repository.js';
 import { IdiomChainRepository } from '../src/features/games/idiom-chain/repository.js';
+import { OpenBookQuizRepository } from '../src/features/games/open-book-quiz/repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -25,6 +27,16 @@ test('PostgreSQL migration and activity writes are idempotent', {
     assert.equal(
       Number((await pool.query('SELECT count(*) FROM idioms WHERE active = true')).rows[0].count),
       5310,
+    );
+    const firstQuizSeed = await seedOpenBookQuestions(pool);
+    const secondQuizSeed = await seedOpenBookQuestions(pool);
+    assert.equal(firstQuizSeed.questionCount, 360);
+    assert.deepEqual(secondQuizSeed, { imported: false, questionCount: 360 });
+    assert.equal(
+      Number((await pool.query(
+        'SELECT count(*) FROM open_book_questions WHERE active = true',
+      )).rows[0].count),
+      360,
     );
     const repository = new ActivityRepository(pool);
     const guildId = `test-${Date.now()}`;
@@ -123,6 +135,57 @@ test('PostgreSQL migration and activity writes are idempotent', {
     assert.equal(await members.removeMember(guildId, 'sleeper', new Date('2026-10-04T05:01:00Z')), false);
 
     const numberChain = new NumberChainRepository(pool);
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: true,
+      enabled: true,
+      currentNumber: '0',
+    });
+
+    await numberChain.setEnabled(guildId, 'game', false);
+    const openBook = new OpenBookQuizRepository(pool);
+    const openedQuiz = await openBook.setEnabled(guildId, 'game', true, {
+      userId: 'starter',
+      subject: '社會',
+    });
+    assert.equal(openedQuiz.changed, true);
+    assert.equal(openedQuiz.enabled, true);
+    assert.equal(openedQuiz.question.subject, '社會');
+    assert.equal((await openBook.setEnabled(guildId, 'game', true, {
+      userId: 'other',
+      subject: '自然',
+    })).question.id, openedQuiz.question.id);
+    const wrongIndex = (openedQuiz.question.answerIndex + 1) % 4;
+    assert.equal((await openBook.submitAnswer(
+      guildId, 'game', openedQuiz.question.id, 'wrong-player', wrongIndex,
+    )).status, 'incorrect');
+    assert.equal((await openBook.submitAnswer(
+      guildId, 'game', openedQuiz.question.id, 'wrong-player', openedQuiz.question.answerIndex,
+    )).status, 'already_answered');
+    const quizRace = await Promise.all([
+      openBook.submitAnswer(
+        guildId, 'game', openedQuiz.question.id, 'player-a', openedQuiz.question.answerIndex,
+      ),
+      openBook.submitAnswer(
+        guildId, 'game', openedQuiz.question.id, 'player-b', openedQuiz.question.answerIndex,
+      ),
+    ]);
+    assert.equal(quizRace.filter((result) => result.status === 'correct').length, 1);
+    assert.equal(quizRace.filter((result) => result.status === 'stale').length, 1);
+    const nextQuizQuestion = quizRace.find((result) => result.status === 'correct').nextQuestion;
+    assert.notEqual(nextQuizQuestion.id, openedQuiz.question.id);
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: false,
+      enabled: false,
+      conflict: 'open_book_quiz',
+    });
+    assert.equal((await openBook.setEnabled(guildId, 'game', false, {
+      userId: 'other',
+      isAdmin: false,
+    })).forbidden, true);
+    assert.equal((await openBook.setEnabled(guildId, 'game', false, {
+      userId: 'admin',
+      isAdmin: true,
+    })).changed, true);
     assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
       changed: true,
       enabled: true,

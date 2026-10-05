@@ -14,6 +14,7 @@ test('default command discovery loads every public command', async () => {
     '伺服器統計',
     '成員活躍查詢',
     '成語接龍',
+    '開卷有益',
     '數字接龍',
     '幾a幾b',
   ].sort());
@@ -24,7 +25,7 @@ test('composition root builds a complete disposable bot runtime', async () => {
     database: {},
     logger: { info: () => {}, error: () => {} },
   });
-  assert.equal(runtime.commands.size, 6);
+  assert.equal(runtime.commands.size, 7);
   assert.ok(runtime.client.listenerCount(Events.MessageCreate) > 0);
   runtime.dispose();
   assert.equal(runtime.client.listenerCount(Events.MessageCreate), 0);
@@ -78,6 +79,7 @@ test('event wiring fans messages out and disposes runtime resources', async () =
     numberChainService: { handleMessage: async () => calls.push('number-chain') },
     bullsAndCowsService: { handleMessage: async () => calls.push('bulls-and-cows') },
     idiomChainService: { handleMessage: async () => calls.push('idiom-chain') },
+    openBookQuizService: { initializeClient: async () => {} },
     logger: { info: () => {}, error: () => {} },
   });
 

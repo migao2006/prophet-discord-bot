@@ -16,6 +16,7 @@ export function registerBotEvents({
   numberChainService,
   bullsAndCowsService,
   idiomChainService,
+  openBookQuizService,
   logger,
 }) {
   client.once(Events.ClientReady, (readyClient) => {
@@ -23,6 +24,7 @@ export function registerBotEvents({
       await activityTracker.initializeClient(readyClient);
       await voiceTracker.initializeClient(readyClient);
       await memberTracker.initializeClient(readyClient);
+      await openBookQuizService.initializeClient(readyClient);
       logger.info('bot_ready', {
         userTag: readyClient.user.tag,
         guilds: readyClient.guilds.cache.size,

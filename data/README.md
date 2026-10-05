@@ -21,3 +21,22 @@ python scripts/build-idiom-dataset.py `
 ```
 
 更新檔名後，也要同步調整 `seed-idioms.js` 的預設資料路徑與測試版本。
+
+# 「開卷有益」國中教育會考題庫
+
+`open-book-cap-390fcf615d08.json` 由「開卷有益」專案的國中教育會考題庫篩選產生，
+只保留適合 Discord 顯示的純文字四選一題目。遊戲介面不顯示年份與題號，讓題目保持簡潔；
+資料來源及版本仍記錄於本檔與資料集 metadata。
+
+- 來源：https://github.com/5219rayhsu/open-book-is-good-platform
+- 固定版本：`390fcf615d08362e4885c43058f4ac3c128c2ec2`
+- 原始檔案：`data/cap/bank.json`
+- 試題性質：依法令舉行之考試試題，依中華民國著作權法第 9 條不受著作權保護
+
+更新時下載指定版本的 `bank.json`，再執行：
+
+```powershell
+python scripts/build-open-book-quiz.py bank.json `
+  data/open-book-cap-VERSION.json `
+  --source-version FULL_COMMIT_SHA
+```

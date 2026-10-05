@@ -3,6 +3,7 @@ import { logger } from './core/logger.js';
 import { createDatabase } from './infrastructure/database/client.js';
 import { migrate } from './infrastructure/database/migrate.js';
 import { seedIdioms } from './infrastructure/database/seed-idioms.js';
+import { seedOpenBookQuestions } from './infrastructure/database/seed-open-book-questions.js';
 import { createBot } from './app/create-bot.js';
 
 let config;
@@ -19,6 +20,10 @@ try {
   const idiomSeed = await seedIdioms(database);
   if (idiomSeed.imported) {
     logger.info('idiom_dictionary_imported', { entries: idiomSeed.entryCount });
+  }
+  const quizSeed = await seedOpenBookQuestions(database);
+  if (quizSeed.imported) {
+    logger.info('open_book_questions_imported', { questions: quizSeed.questionCount });
   }
 } catch (error) {
   logger.error('database_initialization_failed', { errorCode: errorCode(error) });
