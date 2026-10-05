@@ -15,6 +15,13 @@ async function pickOpeningIdiom(client) {
          WHERE next.active = true
            AND left(next.idiom, 1) = right(current.idiom, 1)
            AND next.idiom <> current.idiom
+           AND EXISTS (
+             SELECT 1
+             FROM idioms following
+             WHERE following.active = true
+               AND left(following.idiom, 1) = right(next.idiom, 1)
+               AND following.idiom <> next.idiom
+           )
        )
      ORDER BY random()
      LIMIT 1`,
