@@ -12,18 +12,30 @@ const executables = process.platform === 'win32'
   : { npm: 'npm', gh: 'gh', northflank: 'northflank' };
 
 function capture(command, args) {
-  return execFileSync(command, args, { encoding: 'utf8' }).trim();
+  const invocation = resolveInvocation(command, args);
+  return execFileSync(invocation.command, invocation.args, { encoding: 'utf8' }).trim();
 }
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit' });
+    const invocation = resolveInvocation(command, args);
+    const child = spawn(invocation.command, invocation.args, { stdio: 'inherit' });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
       if (code === 0) resolve();
       else reject(new Error(`${command} failed (${signal ?? code})`));
     });
   });
+}
+
+function resolveInvocation(command, args) {
+  if (process.platform !== 'win32' || !command.toLowerCase().endsWith('.cmd')) {
+    return { command, args };
+  }
+  return {
+    command: process.env.ComSpec ?? 'cmd.exe',
+    args: ['/d', '/s', '/c', command, ...args],
+  };
 }
 
 function sleep(milliseconds) {
