@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.js",
     "register": "node --env-file-if-exists=.env src/register.js",
+    "deploy": "node scripts/deploy.js",
     "test": "node --test",
     "check": "node scripts/check.js"
   },

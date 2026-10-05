@@ -15,6 +15,7 @@ async function findJavaScriptFiles(directory) {
 const files = [
   ...await findJavaScriptFiles(path.resolve('src')),
   ...await findJavaScriptFiles(path.resolve('test')),
+  ...await findJavaScriptFiles(path.resolve('scripts')),
 ];
 
 for (const file of files) {

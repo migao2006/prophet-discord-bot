@@ -84,6 +84,19 @@ Northflank 的 Developer Sandbox 運算資源本身免費，但建立 Service �
 
 推送新版程式後，GitHub Actions 會更新 `latest` 映像；在 Northflank 重新部署服務即可套用新版。
 
+首次使用本機自動部署前，安裝並登入 Northflank CLI：
+
+```powershell
+npm.cmd install --global @northflank/cli
+northflank login
+```
+
+程式已提交且工作目錄乾淨時，可用一條指令完成檢查、推送、等待容器建置、重新啟動服務、確認 `bot_ready` 及同步 Discord 指令：
+
+```powershell
+npm.cmd run deploy
+```
+
 Application ID 只在註冊指令時使用，不需要放入長時間執行的 Northflank Service。`DISCORD_GUILD_ID` 是選填；若設定，註冊流程會移除該伺服器裡舊的伺服器專用指令。修改指令定義後，重新執行 `npm run register`。資料庫 migration 會在服務登入 Discord 前自動執行。
 
 ## Docker
