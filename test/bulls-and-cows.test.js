@@ -142,4 +142,11 @@ test('1A2B command opens current channel and reports number-chain conflicts', as
   });
   await execute(interaction, { bullsAndCowsRepository });
   assert.match(reply.content, /數字接龍/);
+
+  bullsAndCowsRepository.setEnabled = async () => ({
+    changed: false, enabled: false, conflict: 'idiom_chain',
+  });
+  await execute(interaction, { bullsAndCowsRepository });
+  assert.match(reply.content, /成語接龍/);
+  assert.match(reply.content, /成語接龍 狀態:關閉/);
 });

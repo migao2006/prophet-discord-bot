@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { migrate } from '../src/infrastructure/database/migrate.js';
+import { seedIdioms } from '../src/infrastructure/database/seed-idioms.js';
 import { ActivityRepository } from '../src/features/activity/repository.js';
 import { MemberRepository } from '../src/features/members/repository.js';
 import { NumberChainRepository } from '../src/features/games/number-chain/repository.js';
 import { BullsAndCowsRepository } from '../src/features/games/bulls-and-cows/repository.js';
+import { IdiomChainRepository } from '../src/features/games/idiom-chain/repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -16,6 +18,14 @@ test('PostgreSQL migration and activity writes are idempotent', {
   try {
     await migrate(pool);
     await migrate(pool);
+    const firstSeed = await seedIdioms(pool);
+    const secondSeed = await seedIdioms(pool);
+    assert.equal(firstSeed.entryCount, 5310);
+    assert.deepEqual(secondSeed, { imported: false, entryCount: 5310 });
+    assert.equal(
+      Number((await pool.query('SELECT count(*) FROM idioms WHERE active = true')).rows[0].count),
+      5310,
+    );
     const repository = new ActivityRepository(pool);
     const guildId = `test-${Date.now()}`;
     await repository.ensureGuild(guildId, new Date('2026-10-04T00:00:00Z'));
@@ -161,6 +171,92 @@ test('PostgreSQL migration and activity writes are idempotent', {
       conflict: 'bulls_and_cows',
     });
     assert.equal((await bullsAndCows.setEnabled(guildId, 'game', false)).changed, true);
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: true,
+      enabled: true,
+      currentNumber: '0',
+    });
+
+    const idiomChain = new IdiomChainRepository(pool);
+    assert.deepEqual(await idiomChain.setEnabled(guildId, 'game', true), {
+      changed: false,
+      enabled: false,
+      conflict: 'number_chain',
+    });
+    await numberChain.setEnabled(guildId, 'game', false);
+    const idiomOpening = await idiomChain.setEnabled(guildId, 'game', true);
+    assert.equal(idiomOpening.changed, true);
+    assert.equal(idiomOpening.enabled, true);
+    assert.match(idiomOpening.currentIdiom, /^\p{Script=Han}{4}$/u);
+    assert.equal(
+      (await idiomChain.tryAdvance(guildId, 'game', 'player-a', '龘龘龘龘')).reason,
+      'not_found',
+    );
+    const candidate = (await pool.query(
+      `SELECT candidate.idiom
+       FROM idioms candidate
+       WHERE candidate.active = true
+         AND left(candidate.idiom, 1) = right($1, 1)
+         AND candidate.idiom <> $1
+         AND EXISTS (
+           SELECT 1 FROM idioms next
+           WHERE next.active = true
+             AND left(next.idiom, 1) = right(candidate.idiom, 1)
+             AND next.idiom <> candidate.idiom
+         )
+       LIMIT 1`,
+      [idiomOpening.currentIdiom],
+    )).rows[0].idiom;
+    assert.equal(
+      (await idiomChain.tryAdvance(guildId, 'game', 'player-a', candidate)).status,
+      'correct',
+    );
+    assert.equal(
+      (await idiomChain.tryAdvance(guildId, 'game', 'player-a', candidate)).reason,
+      'same_user',
+    );
+    const deadEndPair = (await pool.query(
+      `SELECT previous.idiom AS previous_idiom, answer.idiom AS answer_idiom
+       FROM idioms previous
+       JOIN idioms answer ON left(answer.idiom, 1) = right(previous.idiom, 1)
+       WHERE previous.active = true
+         AND answer.active = true
+         AND NOT EXISTS (
+           SELECT 1 FROM idioms next
+           WHERE next.active = true
+             AND left(next.idiom, 1) = right(answer.idiom, 1)
+         )
+       LIMIT 1`,
+    )).rows[0];
+    await pool.query(
+      'DELETE FROM idiom_chain_used WHERE guild_id = $1 AND channel_id = $2',
+      [guildId, 'game'],
+    );
+    await pool.query(
+      `UPDATE idiom_chain_channels
+       SET current_idiom = $3, last_user_id = NULL
+       WHERE guild_id = $1 AND channel_id = $2`,
+      [guildId, 'game', deadEndPair.previous_idiom],
+    );
+    await pool.query(
+      `INSERT INTO idiom_chain_used (guild_id, channel_id, idiom)
+       VALUES ($1, $2, $3)`,
+      [guildId, 'game', deadEndPair.previous_idiom],
+    );
+    const completedRound = await idiomChain.tryAdvance(
+      guildId,
+      'game',
+      'player-b',
+      deadEndPair.answer_idiom,
+    );
+    assert.equal(completedRound.status, 'round_complete');
+    assert.match(completedRound.openingIdiom, /^\p{Script=Han}{4}$/u);
+    assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
+      changed: false,
+      enabled: false,
+      conflict: 'idiom_chain',
+    });
+    assert.equal((await idiomChain.setEnabled(guildId, 'game', false)).changed, true);
     assert.deepEqual(await numberChain.setEnabled(guildId, 'game', true), {
       changed: true,
       enabled: true,

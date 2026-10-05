@@ -9,11 +9,17 @@ const REQUIRED_BOT_PERMISSIONS = [
   PermissionFlagsBits.ViewChannel,
   PermissionFlagsBits.SendMessages,
   PermissionFlagsBits.ReadMessageHistory,
+  PermissionFlagsBits.AddReactions,
 ];
 
+const CONFLICT_MESSAGES = {
+  number_chain: '這個頻道正在玩數字接龍唷～🎲 請先用 `/數字接龍 狀態:關閉`，再開啟成語接龍。',
+  bulls_and_cows: '這個頻道正在破解 1A2B 唷～🔐 請先用 `/幾a幾b 狀態:關閉`，再開啟成語接龍。',
+};
+
 export const data = new SlashCommandBuilder()
-  .setName('幾a幾b')
-  .setDescription('在目前頻道開啟或關閉多人 1A2B')
+  .setName('成語接龍')
+  .setDescription('在目前頻道開啟或關閉成語接龍')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addStringOption((option) => option
     .setName('狀態')
@@ -24,7 +30,7 @@ export const data = new SlashCommandBuilder()
       { name: '關閉', value: '關閉' },
     ));
 
-export async function execute(interaction, { bullsAndCowsRepository }) {
+export async function execute(interaction, { idiomChainRepository }) {
   if (!interaction.inGuild() || !interaction.guild || !interaction.channel) {
     await interaction.reply({ content: '此指令只能在伺服器中使用。', flags: MessageFlags.Ephemeral });
     return;
@@ -35,7 +41,7 @@ export async function execute(interaction, { bullsAndCowsRepository }) {
   }
   if (![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(interaction.channel.type)) {
     await interaction.reply({
-      content: '1A2B 只能在一般文字頻道或公告頻道中設定。',
+      content: '成語接龍只能在一般文字頻道或公告頻道中設定。',
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -45,30 +51,40 @@ export async function execute(interaction, { bullsAndCowsRepository }) {
   if (enabled && interaction.appPermissions
     && !interaction.appPermissions.has(REQUIRED_BOT_PERMISSIONS)) {
     await interaction.reply({
-      content: '就差一點點啦～🔧 請先給我「檢視頻道」、「傳送訊息」與「讀取訊息歷史記錄」權限。',
+      content: '差一點點就能開玩啦～🔧 請先給我「檢視頻道」、「傳送訊息」、「讀取訊息歷史記錄」與「新增反應」權限。',
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  const result = await bullsAndCowsRepository.setEnabled(
+  const result = await idiomChainRepository.setEnabled(
     interaction.guildId,
     interaction.channelId,
     enabled,
   );
+  if (result.conflict) {
+    await interaction.reply({
+      content: CONFLICT_MESSAGES[result.conflict] ?? '這個頻道已經有其他遊戲在進行中囉～🎮',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+  if (enabled && result.changed) {
+    const nextCharacter = Array.from(result.currentIdiom).at(-1);
+    await interaction.reply({
+      content: `成語接龍開張啦～🎉\n起始成語是「**${result.currentIdiom}**」，請從「**${nextCharacter}**」開始接！`,
+    });
+    return;
+  }
+
   let content;
-  if (result.conflict === 'number_chain') {
-    content = '這個頻道正在玩數字接龍唷～🎲 請先用 `/數字接龍 狀態:關閉`，再開啟 1A2B。';
-  } else if (result.conflict === 'idiom_chain') {
-    content = '這個頻道正在玩成語接龍唷～📚 請先用 `/成語接龍 狀態:關閉`，再開啟 1A2B。';
-  } else if (enabled && result.changed) {
-    content = '密碼已經藏好啦～🔐 請直接輸入 **4 個不重複的數字**，一起來破解 1A2B 吧！';
-  } else if (enabled) {
-    content = `這局還在進行中唷～🕵️ 大家已經猜了 **${result.guessCount}** 次，繼續加油！`;
+  if (enabled) {
+    const nextCharacter = Array.from(result.currentIdiom).at(-1);
+    content = `遊戲已經在進行中囉～📚 目前是「**${result.currentIdiom}**」，請從「**${nextCharacter}**」開始。`;
   } else if (result.changed) {
-    content = '1A2B 先收攤休息啦～🌙 這個頻道的遊戲已關閉。';
+    content = '成語接龍先休息一下啦～🌙 已關閉這個頻道的遊戲。';
   } else {
-    content = '這個頻道目前沒有開啟 1A2B 唷～🍃';
+    content = '這個頻道目前沒有開啟成語接龍唷～🍃';
   }
   await interaction.reply({ content, flags: MessageFlags.Ephemeral });
 }

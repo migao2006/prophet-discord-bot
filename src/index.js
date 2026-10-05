@@ -2,6 +2,7 @@ import { readConfig, errorCode } from './core/config.js';
 import { logger } from './core/logger.js';
 import { createDatabase } from './infrastructure/database/client.js';
 import { migrate } from './infrastructure/database/migrate.js';
+import { seedIdioms } from './infrastructure/database/seed-idioms.js';
 import { createBot } from './app/create-bot.js';
 
 let config;
@@ -15,8 +16,12 @@ try {
 const database = createDatabase(config);
 try {
   await migrate(database);
+  const idiomSeed = await seedIdioms(database);
+  if (idiomSeed.imported) {
+    logger.info('idiom_dictionary_imported', { entries: idiomSeed.entryCount });
+  }
 } catch (error) {
-  logger.error('database_migration_failed', { errorCode: errorCode(error) });
+  logger.error('database_initialization_failed', { errorCode: errorCode(error) });
   await database.end().catch(() => {});
   process.exit(1);
 }

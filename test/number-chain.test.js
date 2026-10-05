@@ -169,4 +169,14 @@ test('number chain command reports a 1A2B conflict', async () => {
   });
   assert.match(reply.content, /1A2B/);
   assert.match(reply.content, /幾a幾b/);
+
+  await execute(interaction, {
+    numberChainRepository: {
+      setEnabled: async () => ({
+        changed: false, enabled: false, conflict: 'idiom_chain',
+      }),
+    },
+  });
+  assert.match(reply.content, /成語接龍/);
+  assert.match(reply.content, /成語接龍 狀態:關閉/);
 });

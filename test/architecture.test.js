@@ -13,6 +13,7 @@ test('default command discovery loads every public command', async () => {
     '今日發言',
     '伺服器統計',
     '成員活躍查詢',
+    '成語接龍',
     '數字接龍',
     '幾a幾b',
   ].sort());
@@ -23,7 +24,7 @@ test('composition root builds a complete disposable bot runtime', async () => {
     database: {},
     logger: { info: () => {}, error: () => {} },
   });
-  assert.equal(runtime.commands.size, 5);
+  assert.equal(runtime.commands.size, 6);
   assert.ok(runtime.client.listenerCount(Events.MessageCreate) > 0);
   runtime.dispose();
   assert.equal(runtime.client.listenerCount(Events.MessageCreate), 0);
@@ -76,12 +77,13 @@ test('event wiring fans messages out and disposes runtime resources', async () =
     memberTracker: {},
     numberChainService: { handleMessage: async () => calls.push('number-chain') },
     bullsAndCowsService: { handleMessage: async () => calls.push('bulls-and-cows') },
+    idiomChainService: { handleMessage: async () => calls.push('idiom-chain') },
     logger: { info: () => {}, error: () => {} },
   });
 
   client.emit(Events.MessageCreate, { guildId: 'guild', channelId: 'channel' });
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(calls.sort(), ['activity', 'bulls-and-cows', 'number-chain'].sort());
+  assert.deepEqual(calls.sort(), ['activity', 'bulls-and-cows', 'idiom-chain', 'number-chain'].sort());
 
   dispose();
   assert.equal(client.destroyed, true);

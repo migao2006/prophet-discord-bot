@@ -12,6 +12,8 @@ import { NumberChainRepository } from '../features/games/number-chain/repository
 import { NumberChainService } from '../features/games/number-chain/service.js';
 import { BullsAndCowsRepository } from '../features/games/bulls-and-cows/repository.js';
 import { BullsAndCowsService } from '../features/games/bulls-and-cows/service.js';
+import { IdiomChainRepository } from '../features/games/idiom-chain/repository.js';
+import { IdiomChainService } from '../features/games/idiom-chain/service.js';
 import { registerBotEvents } from './register-events.js';
 
 const INTENTS = [
@@ -34,6 +36,8 @@ export async function createBot({ database, logger }) {
   const numberChainService = new NumberChainService(numberChainRepository, logger);
   const bullsAndCowsRepository = new BullsAndCowsRepository(database);
   const bullsAndCowsService = new BullsAndCowsService(bullsAndCowsRepository, logger);
+  const idiomChainRepository = new IdiomChainRepository(database);
+  const idiomChainService = new IdiomChainService(idiomChainRepository, logger);
   const commands = await loadCommands();
   const client = new Client({
     intents: INTENTS,
@@ -46,6 +50,7 @@ export async function createBot({ database, logger }) {
       serverStatsService,
       numberChainRepository,
       bullsAndCowsRepository,
+      idiomChainRepository,
     },
     logger,
   });
@@ -57,6 +62,7 @@ export async function createBot({ database, logger }) {
     memberTracker,
     numberChainService,
     bullsAndCowsService,
+    idiomChainService,
     logger,
   });
 

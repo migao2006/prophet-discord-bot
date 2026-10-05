@@ -33,3 +33,9 @@ src/
 4. 若需要 Gateway 事件，在 `app/register-events.js` 綁定並使用統一的非同步錯誤觀察器。
 5. Schema 變更以遞增編號 SQL 放入 `infrastructure/database/migrations`。
 6. 純規則寫單元測試；涉及鎖定或交易的行為加入 PostgreSQL 整合測試。
+
+## 版本化資料
+
+成語接龍的教育部詞庫放在 `data/`，由可重複執行的轉換腳本從官方 XLSX
+產生。資料庫 migration 只建立 schema；`seed-idioms.js` 在 Discord 登入前以
+來源版本為鍵執行冪等匯入，避免 migration 內嵌大量第三方資料。

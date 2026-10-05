@@ -15,6 +15,7 @@ export function registerBotEvents({
   memberTracker,
   numberChainService,
   bullsAndCowsService,
+  idiomChainService,
   logger,
 }) {
   client.once(Events.ClientReady, (readyClient) => {
@@ -82,6 +83,7 @@ export function registerBotEvents({
     observe(activityTracker.handleMessageCreate(message), logger, 'message_tracking_failed', fields);
     observe(numberChainService.handleMessage(message), logger, 'number_chain_failed', fields);
     observe(bullsAndCowsService.handleMessage(message), logger, 'bulls_and_cows_failed', fields);
+    observe(idiomChainService.handleMessage(message), logger, 'idiom_chain_failed', fields);
   });
   client.on(Events.MessageDelete, (message) => {
     observe(
