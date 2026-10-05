@@ -86,6 +86,7 @@ test('question payload stays clean and only exposes subject, question, choices, 
   assert.equal(embed.title, '📖 開卷有益・社會');
   assert.match(embed.description, /臺灣最高的山/);
   assert.match(embed.description, /A．/);
+  assert.doesNotMatch(embed.description, /\*\*/);
   assert.doesNotMatch(JSON.stringify(payload), /來源|exam_year|question_number/);
   assert.deepEqual(
     payload.components[0].components.map((button) => button.data.label),

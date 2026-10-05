@@ -32,12 +32,12 @@ function hasCurrentButtons(message, questionId) {
 export function createQuestionPayload(question, content) {
   const subject = SUBJECT_NAMES[question.subject] ?? question.subject;
   const choices = question.options
-    .map((option, index) => `**${LETTERS[index]}．** ${option}`)
+    .map((option, index) => `${LETTERS[index]}．${option}`)
     .join('\n\n');
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(`📖 開卷有益・${subject}`)
-    .setDescription(`**${question.question}**\n\n${choices}`)
+    .setDescription(`${question.question}\n\n${choices}`)
     .setFooter({ text: '選一個答案吧～每人每題只能回答一次' });
   const buttons = new ActionRowBuilder().addComponents(
     ...LETTERS.map((letter, index) => new ButtonBuilder()
