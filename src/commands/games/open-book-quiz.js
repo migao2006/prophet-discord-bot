@@ -13,6 +13,7 @@ const REQUIRED_BOT_PERMISSIONS = [
 ];
 
 const CONFLICT_MESSAGES = {
+  werewolf: '這個頻道正在玩狼人殺～🐺 請由房主或管理員使用 `/狼人殺 操作:關閉`。',
   number_chain: '這個頻道正在玩數字接龍唷～🎲 請先用 `/數字接龍 狀態:關閉`。',
   bulls_and_cows: '這個頻道正在破解 1A2B 唷～🔐 請先用 `/幾a幾b 狀態:關閉`。',
   idiom_chain: '這個頻道正在玩成語接龍唷～📚 請先用 `/成語接龍 狀態:關閉`。',

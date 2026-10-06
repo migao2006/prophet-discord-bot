@@ -57,7 +57,9 @@ export async function execute(interaction, { bullsAndCowsRepository }) {
     enabled,
   );
   let content;
-  if (result.conflict === 'number_chain') {
+  if (result.conflict === 'werewolf') {
+    content = '這個頻道正在玩狼人殺～🐺 請由房主或管理員使用 `/狼人殺 操作:關閉`。';
+  } else if (result.conflict === 'number_chain') {
     content = '這個頻道正在玩數字接龍唷～🎲 請先用 `/數字接龍 狀態:關閉`，再開啟 1A2B。';
   } else if (result.conflict === 'idiom_chain') {
     content = '這個頻道正在玩成語接龍唷～📚 請先用 `/成語接龍 狀態:關閉`，再開啟 1A2B。';

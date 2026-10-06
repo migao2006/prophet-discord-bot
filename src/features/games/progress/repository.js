@@ -5,6 +5,7 @@ const COUNTER_COLUMNS = Object.freeze({
   bulls_and_cows: 'bulls_and_cows_wins',
   idiom_chain: 'idiom_chain_successes',
   open_book_quiz: 'open_book_correct',
+  werewolf: 'werewolf_wins',
 });
 
 function toProfile(row, userId) {
@@ -19,6 +20,7 @@ function toProfile(row, userId) {
     bullsAndCowsWins: Number(base.bulls_and_cows_wins),
     idiomChainSuccesses: Number(base.idiom_chain_successes),
     openBookCorrect: Number(base.open_book_correct),
+    werewolfWins: Number(base.werewolf_wins ?? 0),
   };
 }
 

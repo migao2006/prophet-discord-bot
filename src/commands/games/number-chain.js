@@ -58,7 +58,8 @@ export async function execute(interaction, { numberChainRepository }) {
     enabled,
   );
   let content;
-  if (result.conflict === 'bulls_and_cows') content = '這個頻道正在破解 1A2B 唷～🔐 請先用 `/幾a幾b 狀態:關閉`，再開啟數字接龍。';
+  if (result.conflict === 'werewolf') content = '這個頻道正在玩狼人殺～🐺 請由房主或管理員使用 `/狼人殺 操作:關閉`。';
+  else if (result.conflict === 'bulls_and_cows') content = '這個頻道正在破解 1A2B 唷～🔐 請先用 `/幾a幾b 狀態:關閉`，再開啟數字接龍。';
   else if (result.conflict === 'idiom_chain') content = '這個頻道正在玩成語接龍唷～📚 請先用 `/成語接龍 狀態:關閉`，再開啟數字接龍。';
   else if (result.conflict === 'open_book_quiz') content = '這個頻道正在玩開卷有益唷～📖 請先用 `/開卷有益 狀態:關閉`，再開啟數字接龍。';
   else if (enabled && result.changed) content = '數字接龍開張啦～🎉 請從 **1** 開始，一起把數字接高高吧！';

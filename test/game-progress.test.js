@@ -32,6 +32,7 @@ test('game XP values, level thresholds, and five-level titles match the design',
     bulls_and_cows: 50,
     idiom_chain: 16,
     open_book_quiz: 20,
+    werewolf: 100,
   });
   assert.equal(LEVEL_TITLES.length, 21);
   assert.equal(LEVEL_TITLE_COLORS.size, 21);

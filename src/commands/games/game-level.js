@@ -36,6 +36,7 @@ export async function execute(interaction, { gameProgressRepository }) {
       { name: '📚 成語接龍', value: `${profile.idiomChainSuccesses} 次`, inline: true },
       { name: '📖 開卷有益', value: `${profile.openBookCorrect} 題`, inline: true },
       { name: '🔐 1A2B', value: `${profile.bullsAndCowsWins} 局`, inline: true },
+      { name: '🐺 狼人殺', value: `${profile.werewolfWins} 勝`, inline: true },
     );
   await interaction.reply({ embeds: [embed] });
 }

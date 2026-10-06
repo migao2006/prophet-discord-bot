@@ -20,6 +20,8 @@ import { FunImageService } from '../features/fun-images/service.js';
 import { GameProgressRepository } from '../features/games/progress/repository.js';
 import { GameLevelRoleService } from '../features/games/progress/role-service.js';
 import { GameProgressService } from '../features/games/progress/service.js';
+import { WerewolfRepository } from '../features/games/werewolf/repository.js';
+import { WerewolfService } from '../features/games/werewolf/service.js';
 import { registerBotEvents } from './register-events.js';
 
 const INTENTS = [
@@ -54,6 +56,8 @@ export async function createBot({ database, logger }) {
   const openBookQuizRepository = new OpenBookQuizRepository(database, gameProgressRepository);
   const openBookQuizService = new OpenBookQuizService(openBookQuizRepository, logger, gameProgressService);
   const funImageService = new FunImageService({ logger });
+  const werewolfRepository = new WerewolfRepository(database, gameProgressRepository);
+  const werewolfService = new WerewolfService(werewolfRepository, gameProgressService, logger);
   const commands = await loadCommands();
   const client = new Client({
     intents: INTENTS,
@@ -73,6 +77,7 @@ export async function createBot({ database, logger }) {
       gameProgressRepository,
       gameLevelRoleService,
       gameProgressService,
+      werewolfService,
     },
     logger,
   });
@@ -87,6 +92,7 @@ export async function createBot({ database, logger }) {
     idiomChainService,
     openBookQuizService,
     gameLevelRoleService,
+    werewolfService,
     logger,
   });
 

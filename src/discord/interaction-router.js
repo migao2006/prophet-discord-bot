@@ -4,7 +4,7 @@ import { errorCode } from '../core/config.js';
 async function sendFailure(interaction) {
   const response = { content: '處理失敗，請稍後再試。', flags: MessageFlags.Ephemeral };
   if (interaction.deferred) {
-    if (interaction.isButton?.()) {
+    if (interaction.isButton?.() || interaction.isStringSelectMenu?.()) {
       await interaction.followUp(response).catch(() => {});
     } else {
       await interaction.editReply({ content: response.content }).catch(() => {});
@@ -18,20 +18,23 @@ async function sendFailure(interaction) {
 
 export function createInteractionHandler({ commands, context, logger }) {
   return async function handleInteraction(interaction) {
-    if (interaction.isButton?.()) {
+    if (interaction.isButton?.() || interaction.isStringSelectMenu?.()) {
       const startedAt = Date.now();
       try {
-        const handled = await context.openBookQuizService?.handleButton(interaction);
+        const isWerewolf = interaction.customId?.startsWith('ww:');
+        const handled = isWerewolf
+          ? await context.werewolfService?.handleComponent(interaction)
+          : interaction.isButton?.() ? await context.openBookQuizService?.handleButton(interaction) : false;
         if (handled) {
           logger.info('button_completed', {
-            component: 'open_book_quiz',
+            component: isWerewolf ? 'werewolf' : 'open_book_quiz',
             guildId: interaction.guildId,
             durationMs: Date.now() - startedAt,
           });
         }
       } catch (error) {
         logger.error('button_failed', {
-          component: 'open_book_quiz',
+          component: interaction.customId?.startsWith('ww:') ? 'werewolf' : 'open_book_quiz',
           guildId: interaction.guildId,
           durationMs: Date.now() - startedAt,
           errorCode: errorCode(error),

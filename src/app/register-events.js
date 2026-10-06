@@ -18,6 +18,7 @@ export function registerBotEvents({
   idiomChainService,
   openBookQuizService,
   gameLevelRoleService,
+  werewolfService,
   logger,
 }) {
   client.once(Events.ClientReady, (readyClient) => {
@@ -26,6 +27,7 @@ export function registerBotEvents({
       await voiceTracker.initializeClient(readyClient);
       await memberTracker.initializeClient(readyClient);
       await openBookQuizService.initializeClient(readyClient);
+      await werewolfService?.initializeClient(readyClient);
       logger.info('bot_ready', {
         userTag: readyClient.user.tag,
         guilds: readyClient.guilds.cache.size,
@@ -72,6 +74,9 @@ export function registerBotEvents({
     );
   });
   client.on(Events.GuildMemberRemove, (member) => {
+    observe(werewolfService?.handleMemberRemove(member), logger, 'werewolf_member_leave_failed', {
+      guildId: member.guild.id,
+    });
     observe(
       memberTracker.handleMemberRemove(member),
       logger,
@@ -100,6 +105,7 @@ export function registerBotEvents({
     observe(idiomChainService.handleMessage(message), logger, 'idiom_chain_failed', fields);
   });
   client.on(Events.MessageDelete, (message) => {
+    observe(werewolfService?.handleMessageDelete(message), logger, 'werewolf_message_restore_failed');
     observe(
       activityTracker.handleMessageDelete(message),
       logger,
@@ -108,6 +114,9 @@ export function registerBotEvents({
     );
   });
   client.on(Events.MessageBulkDelete, (messages) => {
+    for (const message of messages.values()) {
+      observe(werewolfService?.handleMessageDelete(message), logger, 'werewolf_message_restore_failed');
+    }
     observe(
       activityTracker.handleMessageDeleteBulk(messages),
       logger,
@@ -115,9 +124,24 @@ export function registerBotEvents({
     );
   });
 
+  client.on(Events.ChannelDelete, (channel) => {
+    observe(werewolfService?.handleChannelDelete(channel), logger, 'werewolf_channel_delete_failed');
+  });
+  client.on(Events.GuildDelete, (guild) => {
+    observe((async () => {
+      if (!werewolfService) return;
+      for (const room of await werewolfService.repository.listWork()) {
+        if (room.guildId === guild.id && !['ended', 'cancelled'].includes(room.state.phase)) {
+          await werewolfService.repository.cancel(room.id, '機器人已離開伺服器，遊戲取消。');
+        }
+      }
+    })(), logger, 'werewolf_guild_leave_failed');
+  });
+
   return function dispose() {
     client.removeAllListeners();
     voiceTracker.stop();
+    werewolfService?.stop();
     client.destroy();
   };
 }

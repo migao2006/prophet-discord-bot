@@ -3,6 +3,7 @@ export const GAME_TYPE = Object.freeze({
   bullsAndCows: 'bulls_and_cows',
   idiomChain: 'idiom_chain',
   openBookQuiz: 'open_book_quiz',
+  werewolf: 'werewolf',
 });
 
 export async function lockChannelGame(client, guildId, channelId) {

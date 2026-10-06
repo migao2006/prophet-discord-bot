@@ -3,6 +3,7 @@ export const GAME_XP = Object.freeze({
   bulls_and_cows: 50,
   idiom_chain: 16,
   open_book_quiz: 20,
+  werewolf: 100,
 });
 
 export const LEVEL_TITLES = Object.freeze([

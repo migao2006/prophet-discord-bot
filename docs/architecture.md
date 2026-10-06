@@ -44,3 +44,9 @@ src/
 開卷有益的會考題庫也放在 `data/`，由固定的上游 commit 轉換成純文字四選一格式；
 `seed-open-book-questions.js` 使用獨立 advisory lock 匯入。按鈕 interaction 由 router
 分派至遊戲服務，頻道狀態與作答去重由 PostgreSQL transaction 保護。
+
+狼人殺將純日夜規則、Discord 面板、服務與 repository 分開；房間 JSON 與截止時間
+持久化，服務每兩秒恢復或結算待處理階段。所有房間交易先鎖共用頻道，再鎖房間，
+階段版本拒絕過期操作，秘密選擇不增加版本，以允許同階段多人提交。
+成員以全域唯一 reservation 防止跨房參賽，結局與去重 XP 同一交易提交，
+公開面板及升等副作用提交後才送出；角色、選擇與查驗結果不寫入日誌。
