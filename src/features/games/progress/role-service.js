@@ -1,6 +1,10 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { errorCode } from '../../../core/config.js';
-import { LEVEL_TITLES, titleMinimumLevel } from './domain.js';
+import {
+  LEVEL_TITLE_COLORS,
+  LEVEL_TITLES,
+  titleMinimumLevel,
+} from './domain.js';
 
 function roleName(level, title) {
   return `Lv.${level}｜${title}`;
@@ -20,21 +24,48 @@ export class GameLevelRoleService {
     const setting = await this.repository.getRoleSetting(guild.id);
     const roles = new Map();
     for (const [level, title] of LEVEL_TITLES) {
+      const name = roleName(level, title);
+      const color = LEVEL_TITLE_COLORS.get(level);
       let role = setting.roles.get(level)
         ? guild.roles.cache.get(setting.roles.get(level)) : null;
       if (!role) {
         role = await guild.roles.create({
-          name: roleName(level, title),
+          name,
+          color,
           permissions: [],
           hoist: false,
           mentionable: false,
           reason: '遊戲等級稱號',
         });
         await this.repository.saveRole(guild.id, level, role.id);
+      } else if (role.name !== name || role.color !== color) {
+        role = await role.edit({
+          name,
+          color,
+          reason: '更新遊戲等級稱號樣式',
+        });
       }
       roles.set(level, role);
     }
     return roles;
+  }
+
+  async initializeClient(client) {
+    const guildIds = new Set(await this.repository.listRoleGuildIds());
+    let updatedGuilds = 0;
+    for (const guild of client.guilds.cache.values()) {
+      if (!guildIds.has(guild.id)) continue;
+      try {
+        await this.ensureRoles(guild);
+        updatedGuilds += 1;
+      } catch (error) {
+        this.logger.error('game_level_role_style_sync_failed', {
+          guildId: guild.id,
+          errorCode: errorCode(error),
+        });
+      }
+    }
+    this.logger.info('game_level_role_style_sync_completed', { updatedGuilds });
   }
 
   async syncMember(member, roles = null) {

@@ -14,6 +14,15 @@ export const LEVEL_TITLES = Object.freeze([
   [100, '永恆預言者'],
 ]);
 
+export const LEVEL_TITLE_COLORS = Object.freeze(new Map([
+  [1, 0x7FC8A9], [5, 0xE8A8C8], [10, 0x74B9E6], [15, 0xB28DDA],
+  [20, 0x64C3B5], [25, 0xC9A66B], [30, 0x9C83C7], [35, 0xE58BA8],
+  [40, 0x559FDB], [45, 0x746CC0], [50, 0xE7B83D], [55, 0x8FC49D],
+  [60, 0x55AFC2], [65, 0x856FC0], [70, 0x9656CF], [75, 0xC85AA5],
+  [80, 0x596BD1], [85, 0x405FB8], [90, 0x7040A0], [95, 0xB97A2D],
+  [100, 0xD9A928],
+]));
+
 export function xpForLevel(level) {
   const safeLevel = Math.min(100, Math.max(1, Math.trunc(level)));
   return 25 * (safeLevel - 1) * safeLevel;

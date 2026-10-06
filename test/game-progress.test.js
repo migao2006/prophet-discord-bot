@@ -8,6 +8,7 @@ import {
 } from 'discord.js';
 import {
   GAME_XP,
+  LEVEL_TITLE_COLORS,
   LEVEL_TITLES,
   levelForXp,
   progressForXp,
@@ -33,6 +34,10 @@ test('game XP values, level thresholds, and five-level titles match the design',
     open_book_quiz: 20,
   });
   assert.equal(LEVEL_TITLES.length, 21);
+  assert.equal(LEVEL_TITLE_COLORS.size, 21);
+  assert.ok([...LEVEL_TITLE_COLORS.values()].every(
+    (color) => Number.isInteger(color) && color > 0 && color <= 0xFFFFFF,
+  ));
   assert.equal(xpForLevel(1), 0);
   assert.equal(xpForLevel(2), 50);
   assert.equal(xpForLevel(10), 2250);
@@ -156,6 +161,45 @@ test('role sync keeps only the member current five-level title', async () => {
   assert.deepEqual(await service.syncMember(member, available), { changed: true });
   assert.deepEqual(removed, ['role-5']);
   assert.deepEqual(added, ['role-10']);
+});
+
+test('existing level roles receive their configured fantasy colors', async () => {
+  const edited = [];
+  const roleEntries = LEVEL_TITLES.map(([level, title]) => {
+    const id = `role-${level}`;
+    return [id, {
+      id,
+      name: `Lv.${level}｜${title}`,
+      color: 0,
+      edit: async (options) => {
+        edited.push({ level, options });
+        return { id, ...options };
+      },
+    }];
+  });
+  const repository = {
+    getRoleSetting: async () => ({
+      enabled: true,
+      roles: new Map(LEVEL_TITLES.map(([level]) => [level, `role-${level}`])),
+    }),
+    saveRole: async () => {},
+  };
+  const service = new GameLevelRoleService(repository, { info: () => {}, error: () => {} });
+  const roles = await service.ensureRoles({
+    id: 'guild',
+    members: {
+      me: { permissions: { has: () => true } },
+    },
+    roles: {
+      cache: new Collection(roleEntries),
+      create: async () => { throw new Error('Unexpected role creation'); },
+    },
+  });
+  assert.equal(roles.size, 21);
+  assert.equal(edited.length, 21);
+  for (const { level, options } of edited) {
+    assert.equal(options.color, LEVEL_TITLE_COLORS.get(level));
+  }
 });
 
 test('new game progress commands expose the intended Chinese interface', () => {

@@ -31,6 +31,11 @@ export function registerBotEvents({
         guilds: readyClient.guilds.cache.size,
       });
       observe(
+        gameLevelRoleService.initializeClient(readyClient),
+        logger,
+        'game_level_role_style_initialization_failed',
+      );
+      observe(
         activityTracker.backfillClient(readyClient),
         logger,
         'activity_backfill_failed',

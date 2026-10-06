@@ -140,6 +140,13 @@ export class GameProgressRepository {
     return result.rows.map((row) => row.guild_id);
   }
 
+  async listRoleGuildIds() {
+    const result = await this.pool.query(
+      'SELECT DISTINCT guild_id FROM guild_game_level_roles',
+    );
+    return result.rows.map((row) => row.guild_id);
+  }
+
   async getLevelNotificationSetting(guildId) {
     const result = await this.pool.query(
       `SELECT enabled, channel_id
