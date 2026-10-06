@@ -19,6 +19,9 @@ test('default command discovery loads every public command', async () => {
     '幾a幾b',
     '隨機料理',
     '隨機貓咪',
+    '遊戲等級',
+    '遊戲排行',
+    '身分組稱號',
   ].sort());
 });
 
@@ -27,7 +30,7 @@ test('composition root builds a complete disposable bot runtime', async () => {
     database: {},
     logger: { info: () => {}, error: () => {} },
   });
-  assert.equal(runtime.commands.size, 9);
+  assert.equal(runtime.commands.size, 12);
   assert.ok(runtime.client.listenerCount(Events.MessageCreate) > 0);
   runtime.dispose();
   assert.equal(runtime.client.listenerCount(Events.MessageCreate), 0);

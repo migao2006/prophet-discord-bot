@@ -6,9 +6,10 @@ import {
 } from '../channel-game-registry.js';
 
 export class BullsAndCowsRepository {
-  constructor(pool, secretGenerator = generateSecret) {
+  constructor(pool, secretGenerator = generateSecret, progressRepository = null) {
     this.pool = pool;
     this.secretGenerator = secretGenerator;
+    this.progressRepository = progressRepository;
   }
 
   async setEnabled(guildId, channelId, enabled) {
@@ -77,7 +78,7 @@ export class BullsAndCowsRepository {
     }
   }
 
-  async submitGuess(guildId, channelId, guess) {
+  async submitGuess(guildId, channelId, userId, messageId, guess) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -108,8 +109,20 @@ export class BullsAndCowsRepository {
            WHERE guild_id = $1 AND channel_id = $2`,
           [guildId, channelId, this.secretGenerator()],
         );
+        const progress = this.progressRepository && userId && messageId
+          ? await this.progressRepository.award(client, {
+            eventKey: `bulls_and_cows:${messageId}`,
+            userId, guildId, channelId, gameType: 'bulls_and_cows',
+          })
+          : null;
         await client.query('COMMIT');
-        return { status: 'won', ...score, attempt, answer };
+        return {
+          status: 'won',
+          ...score,
+          attempt,
+          answer,
+          ...(progress ? { progress } : {}),
+        };
       }
 
       await client.query(

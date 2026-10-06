@@ -16,7 +16,7 @@ class MemoryBullsAndCowsRepository {
     this.calls = 0;
   }
 
-  async submitGuess(_guildId, _channelId, guess) {
+  async submitGuess(_guildId, _channelId, _userId, _messageId, guess) {
     this.calls += 1;
     if (!this.enabled) return { status: 'disabled' };
     if (!guess) return { status: 'invalid' };

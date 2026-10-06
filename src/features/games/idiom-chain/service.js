@@ -1,4 +1,5 @@
 import { errorCode } from '../../../core/config.js';
+import { levelUpText } from '../progress/domain.js';
 
 const IDIOM_PATTERN = /^\p{Script=Han}{4}$/u;
 
@@ -16,9 +17,10 @@ function incorrectMessage(result, idiom) {
 }
 
 export class IdiomChainService {
-  constructor(repository, logger) {
+  constructor(repository, logger, roleService = null) {
     this.repository = repository;
     this.logger = logger;
+    this.roleService = roleService;
   }
 
   async handleMessage(message) {
@@ -32,6 +34,7 @@ export class IdiomChainService {
       message.guildId,
       message.channelId,
       message.author.id,
+      message.id,
       idiom,
     );
     if (result.status === 'disabled') return result;
@@ -55,6 +58,10 @@ export class IdiomChainService {
     } else if (result.status === 'incorrect') {
       reply = incorrectMessage(result, idiom);
     }
+    if (result.progress?.leveledUp) {
+      const notice = levelUpText(message.author.id, result.progress.profile.level);
+      reply = reply ? `${reply}\n${notice}` : notice;
+    }
     if (!reply) return result;
 
     try {
@@ -69,6 +76,9 @@ export class IdiomChainService {
         messageId: message.id,
         errorCode: errorCode(error),
       });
+    }
+    if (result.progress?.titleChanged && this.roleService) {
+      await this.roleService.syncUserAcrossGuilds(message.client, message.author.id);
     }
     return result;
   }

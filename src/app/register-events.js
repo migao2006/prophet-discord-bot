@@ -17,6 +17,7 @@ export function registerBotEvents({
   bullsAndCowsService,
   idiomChainService,
   openBookQuizService,
+  gameLevelRoleService,
   logger,
 }) {
   client.once(Events.ClientReady, (readyClient) => {
@@ -56,6 +57,12 @@ export function registerBotEvents({
       memberTracker.handleMemberAdd(member),
       logger,
       'member_join_tracking_failed',
+      { guildId: member.guild.id, userId: member.id },
+    );
+    observe(
+      gameLevelRoleService.handleMemberAdd(member),
+      logger,
+      'game_level_role_join_sync_failed',
       { guildId: member.guild.id, userId: member.id },
     );
   });

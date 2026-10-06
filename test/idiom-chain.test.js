@@ -15,7 +15,7 @@ class MemoryIdiomChainRepository {
     this.calls = 0;
   }
 
-  async tryAdvance(_guildId, _channelId, userId, idiom) {
+  async tryAdvance(_guildId, _channelId, userId, _messageId, idiom) {
     this.calls += 1;
     if (!this.enabled) return { status: 'disabled' };
     if (!this.dictionary.has(idiom)) return { status: 'incorrect', reason: 'not_found' };

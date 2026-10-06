@@ -199,13 +199,13 @@ test('PostgreSQL migration and activity writes are idempotent', {
       conflict: 'number_chain',
     });
     const concurrent = await Promise.all([
-      numberChain.tryAdvance(guildId, 'game', 'player-a', 1n),
-      numberChain.tryAdvance(guildId, 'game', 'player-b', 1n),
+      numberChain.tryAdvance(guildId, 'game', 'player-a', 'number-a', 1n),
+      numberChain.tryAdvance(guildId, 'game', 'player-b', 'number-b', 1n),
     ]);
     assert.equal(concurrent.filter((result) => result.status === 'correct').length, 1);
     assert.equal(concurrent.filter((result) => result.status === 'incorrect').length, 1);
     assert.equal(
-      (await numberChain.tryAdvance(guildId, 'game', 'player-c', 1n)).status,
+      (await numberChain.tryAdvance(guildId, 'game', 'player-c', 'number-c', 1n)).status,
       'correct',
     );
     assert.equal((await numberChain.setEnabled(guildId, 'game', false)).changed, true);
@@ -214,14 +214,20 @@ test('PostgreSQL migration and activity writes are idempotent', {
       enabled: true,
       guessCount: 0,
     });
-    assert.deepEqual(await bullsAndCows.submitGuess(guildId, 'game', '1038'), {
+    assert.deepEqual(await bullsAndCows.submitGuess(
+      guildId, 'game', 'player-a', 'guess-a', '1038',
+    ), {
       status: 'guessed',
       a: 0,
       b: 3,
       attempt: 1,
     });
-    assert.equal((await bullsAndCows.submitGuess(guildId, 'game', null)).status, 'invalid');
-    assert.deepEqual(await bullsAndCows.submitGuess(guildId, 'game', '0123'), {
+    assert.equal((await bullsAndCows.submitGuess(
+      guildId, 'game', 'player-a', 'guess-b', null,
+    )).status, 'invalid');
+    assert.deepEqual(await bullsAndCows.submitGuess(
+      guildId, 'game', 'player-b', 'guess-c', '0123',
+    ), {
       status: 'won',
       a: 4,
       b: 0,
@@ -252,7 +258,9 @@ test('PostgreSQL migration and activity writes are idempotent', {
     assert.equal(idiomOpening.enabled, true);
     assert.match(idiomOpening.currentIdiom, /^\p{Script=Han}{4}$/u);
     assert.equal(
-      (await idiomChain.tryAdvance(guildId, 'game', 'player-a', '龘龘龘龘')).reason,
+      (await idiomChain.tryAdvance(
+        guildId, 'game', 'player-a', 'idiom-a', '龘龘龘龘',
+      )).reason,
       'not_found',
     );
     const candidate = (await pool.query(
@@ -271,11 +279,15 @@ test('PostgreSQL migration and activity writes are idempotent', {
       [idiomOpening.currentIdiom],
     )).rows[0].idiom;
     assert.equal(
-      (await idiomChain.tryAdvance(guildId, 'game', 'player-a', candidate)).status,
+      (await idiomChain.tryAdvance(
+        guildId, 'game', 'player-a', 'idiom-b', candidate,
+      )).status,
       'correct',
     );
     assert.equal(
-      (await idiomChain.tryAdvance(guildId, 'game', 'player-a', candidate)).reason,
+      (await idiomChain.tryAdvance(
+        guildId, 'game', 'player-a', 'idiom-c', candidate,
+      )).reason,
       'same_user',
     );
     const deadEndPair = (await pool.query(
@@ -310,6 +322,7 @@ test('PostgreSQL migration and activity writes are idempotent', {
       guildId,
       'game',
       'player-b',
+      'idiom-d',
       deadEndPair.answer_idiom,
     );
     assert.equal(completedRound.status, 'round_complete');

@@ -53,8 +53,9 @@ async function pickQuestion(client, guildId, channelId, subject, avoidId = null)
 }
 
 export class OpenBookQuizRepository {
-  constructor(pool) {
+  constructor(pool, progressRepository = null) {
     this.pool = pool;
+    this.progressRepository = progressRepository;
   }
 
   async setEnabled(guildId, channelId, enabled, { userId, isAdmin = false, subject = '全部' }) {
@@ -220,6 +221,12 @@ export class OpenBookQuizRepository {
          VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
         [guildId, channelId, nextQuestion.id],
       );
+      const progress = this.progressRepository
+        ? await this.progressRepository.award(client, {
+          eventKey: `open_book_quiz:${guildId}:${channelId}:${questionId}:${userId}`,
+          userId, guildId, channelId, gameType: 'open_book_quiz',
+        })
+        : null;
       await client.query(
         `UPDATE open_book_quiz_channels
          SET current_question_id = $3, message_id = NULL, updated_at = now()
@@ -227,7 +234,12 @@ export class OpenBookQuizRepository {
         [guildId, channelId, nextQuestion.id],
       );
       await client.query('COMMIT');
-      return { status: 'correct', question, nextQuestion };
+      return {
+        status: 'correct',
+        question,
+        nextQuestion,
+        ...(progress ? { progress } : {}),
+      };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => {});
       throw error;

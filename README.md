@@ -9,9 +9,14 @@
 - `/幾a幾b 狀態:開啟|關閉`：限管理員使用；開啟後成員直接輸入四個不重複的數字，全頻道共同破解答案，猜中後自動開始下一局。
 - `/成語接龍 狀態:開啟|關閉`：限管理員使用；由機器人隨機出題，成員直接輸入四字成語，以相同漢字接龍，同一位成員不能連續作答。
 - `/開卷有益 狀態:開啟|關閉 科目:全部|國文|英文|數學|社會|自然`：所有成員都能開啟無限時四選一問答；每人每題只能回答一次，答對後自動換題。只有開啟者或管理員能關閉。
+- `/遊戲等級 使用者:成員`：查看自己或指定成員的全域遊戲等級、稱號、經驗進度與四種遊戲的成功次數。
+- `/遊戲排行`：顯示目前伺服器成員的全域遊戲經驗前十名；同經驗值會並列名次。
+- `/身分組稱號 狀態:開啟|關閉`：限管理員使用；開啟後建立每五級一個的稱號身分組，並自動同步現有成員與新加入成員。關閉時會移除成員身上的遊戲稱號。
 - `/隨機料理`：從 TheMealDB 隨機取得一張料理圖片。
 - `/隨機貓咪`：從 The Cat API 隨機取得一張貓咪圖片。
 - 同一個頻道一次只能開啟數字接龍、1A2B、成語接龍或開卷有益其中一種遊戲。
+
+四種遊戲成功時會累積全域經驗：數字接龍 2 XP、成語接龍 8 XP、開卷有益 10 XP、1A2B 猜中 25 XP。等級最高 100 級，經驗仍可繼續累積；升級時會在遊戲頻道公布最後到達的等級。稱號從「小小萌芽」開始，每五級更新一次，最高為「永恆預言者」。
 
 機器人透過 Discord Gateway 主動連線，不需要網域、HTTP 伺服器或公開連接埠。程式採用模組化指令、服務層與資料存取層，方便繼續增加功能。
 
@@ -49,7 +54,7 @@ DATABASE_SSL=false
 2. 從 **General Information** 取得 Application ID。
 3. 從 **Bot** 取得 Token。
 4. 在 **Installation** 啟用 Guild Install，加入 `bot` 和 `applications.commands` scopes。
-5. Bot 權限需要 **View Channels**、**Send Messages**、**Read Message History**、**Embed Links** 與 **Add Reactions**。
+5. Bot 權限需要 **View Channels**、**Send Messages**、**Read Message History**、**Embed Links** 與 **Add Reactions**；若要使用遊戲等級身分組，另需 **Manage Roles**。
 6. 將 Bot 加入至少一個伺服器；每個要使用指令的伺服器都必須安裝此 Bot。
 7. 保持 **Interactions Endpoint URL** 空白；本專案使用 Gateway 接收互動。
 8. 在 **Bot → Privileged Gateway Intents** 開啟 **Server Members Intent** 與 **Message Content Intent**；後者只用於辨識頻道遊戲的作答訊息。
@@ -116,13 +121,13 @@ docker build -t prophet-discord-bot .
 
 設定 `TEST_DATABASE_URL` 後，`npm test` 也會執行真實 PostgreSQL migration、去重與刪除回減測試；未設定時只略過這一項整合測試。
 
-部署後由伺服器管理者自行測試 `/今日發言`、`/成員活躍查詢`、`/伺服器統計`、四種頻道遊戲、`/隨機料理` 與 `/隨機貓咪`。若統計略過頻道，確認 Bot 在該頻道具有 View Channel 與 Read Message History；若訊息型頻道遊戲沒有反應，確認 Message Content Intent 已開啟；需要反應符號的遊戲另需 Add Reactions，圖片與問答功能需 Embed Links。若指令逾時，檢查 Northflank Logs、資料庫連線與 Bot Token。
+部署後由伺服器管理者自行測試 `/今日發言`、`/成員活躍查詢`、`/伺服器統計`、四種頻道遊戲、遊戲等級與排行榜、`/隨機料理` 與 `/隨機貓咪`。若統計略過頻道，確認 Bot 在該頻道具有 View Channel 與 Read Message History；若訊息型頻道遊戲沒有反應，確認 Message Content Intent 已開啟；需要反應符號的遊戲另需 Add Reactions，圖片與問答功能需 Embed Links。稱號身分組需要 Manage Roles，且 Bot 自己的身分組必須高於自動建立的稱號。若指令逾時，檢查 Northflank Logs、資料庫連線與 Bot Token。
 
 ## 安全性
 
-- Bot 不需要 Administrator；完整伺服器統計需要 Server Members Intent，三種頻道遊戲需要 Message Content Intent。
+- Bot 不需要 Administrator；完整伺服器統計與稱號同步需要 Server Members Intent，三種訊息型頻道遊戲需要 Message Content Intent。
 - 成語接龍使用教育部《成語典》2020，資料來源、版本及授權說明請見 [data/README.md](data/README.md)。
 - 開卷有益使用國中教育會考公開試題，遊戲畫面不顯示來源資訊；資料版本與來源說明保留於 [data/README.md](data/README.md)。
-- 資料庫只保存 Discord ID、成員加入／離開時間、日期、每日彙總次數、同步游標與語音進出時間，不保存暱稱、頭像、訊息內容或語音內容。
+- 資料庫只保存 Discord ID、成員加入／離開時間、日期、每日彙總次數、遊戲經驗與成功次數、稱號設定、同步游標及語音進出時間，不保存暱稱、頭像、訊息內容或語音內容。
 - 不要在 GitHub 或 Northflank build arguments 儲存 Token；使用 Runtime Secret。
 - 如果 Token 曾外洩，立即在 Discord Developer Portal 重設，再更新 Northflank Secret。

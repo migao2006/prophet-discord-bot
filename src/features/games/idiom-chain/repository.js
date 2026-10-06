@@ -51,8 +51,9 @@ async function resetRound(client, guildId, channelId) {
 }
 
 export class IdiomChainRepository {
-  constructor(pool) {
+  constructor(pool, progressRepository = null) {
     this.pool = pool;
+    this.progressRepository = progressRepository;
   }
 
   async setEnabled(guildId, channelId, enabled) {
@@ -133,7 +134,7 @@ export class IdiomChainRepository {
     }
   }
 
-  async tryAdvance(guildId, channelId, userId, idiom) {
+  async tryAdvance(guildId, channelId, userId, messageId, idiom) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -184,6 +185,12 @@ export class IdiomChainRepository {
          VALUES ($1, $2, $3)`,
         [guildId, channelId, idiom],
       );
+      const progress = this.progressRepository && messageId
+        ? await this.progressRepository.award(client, {
+          eventKey: `idiom_chain:${messageId}`,
+          userId, guildId, channelId, gameType: 'idiom_chain',
+        })
+        : null;
       const nextResult = await client.query(
         `SELECT EXISTS (
            SELECT 1
@@ -204,7 +211,12 @@ export class IdiomChainRepository {
       if (!nextResult.rows[0].has_next) {
         const openingIdiom = await resetRound(client, guildId, channelId);
         await client.query('COMMIT');
-        return { status: 'round_complete', idiom, openingIdiom };
+        return {
+          status: 'round_complete',
+          idiom,
+          openingIdiom,
+          ...(progress ? { progress } : {}),
+        };
       }
 
       await client.query(
@@ -214,7 +226,11 @@ export class IdiomChainRepository {
         [guildId, channelId, idiom, userId],
       );
       await client.query('COMMIT');
-      return { status: 'correct', idiom };
+      return {
+        status: 'correct',
+        idiom,
+        ...(progress ? { progress } : {}),
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

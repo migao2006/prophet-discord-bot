@@ -5,8 +5,9 @@ import {
 } from '../channel-game-registry.js';
 
 export class NumberChainRepository {
-  constructor(pool) {
+  constructor(pool, progressRepository = null) {
     this.pool = pool;
+    this.progressRepository = progressRepository;
   }
 
   async setEnabled(guildId, channelId, enabled) {
@@ -80,7 +81,7 @@ export class NumberChainRepository {
     }
   }
 
-  async tryAdvance(guildId, channelId, userId, number) {
+  async tryAdvance(guildId, channelId, userId, messageId, number) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -116,8 +117,18 @@ export class NumberChainRepository {
          WHERE guild_id = $1 AND channel_id = $2`,
         [guildId, channelId, number.toString(), userId],
       );
+      const progress = this.progressRepository && messageId
+        ? await this.progressRepository.award(client, {
+          eventKey: `number_chain:${messageId}`,
+          userId, guildId, channelId, gameType: 'number_chain',
+        })
+        : null;
       await client.query('COMMIT');
-      return { status: 'correct', currentNumber: number.toString() };
+      return {
+        status: 'correct',
+        currentNumber: number.toString(),
+        ...(progress ? { progress } : {}),
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

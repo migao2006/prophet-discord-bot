@@ -12,7 +12,7 @@ class MemoryNumberChainRepository {
     this.calls = 0;
   }
 
-  async tryAdvance(_guildId, _channelId, userId, number) {
+  async tryAdvance(_guildId, _channelId, userId, _messageId, number) {
     this.calls += 1;
     if (!this.enabled) return { status: 'disabled' };
     const expected = this.current + 1n;
