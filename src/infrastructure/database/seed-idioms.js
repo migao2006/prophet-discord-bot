@@ -7,7 +7,7 @@ const DEFAULT_DATASET = path.join(
   '..',
   '..',
   'data',
-  'moe-idioms-expanded-20261006.json',
+  'moe-idioms-expanded-20261006-f3.json',
 );
 const LOCK_ID = 1_556_253_000;
 

@@ -22,11 +22,11 @@ test('PostgreSQL migration and activity writes are idempotent', {
     await migrate(pool);
     const firstSeed = await seedIdioms(pool);
     const secondSeed = await seedIdioms(pool);
-    assert.equal(firstSeed.entryCount, 11999);
-    assert.deepEqual(secondSeed, { imported: false, entryCount: 11999 });
+    assert.equal(firstSeed.entryCount, 14382);
+    assert.deepEqual(secondSeed, { imported: false, entryCount: 14382 });
     assert.equal(
       Number((await pool.query('SELECT count(*) FROM idioms WHERE active = true')).rows[0].count),
-      11999,
+      14382,
     );
     const firstQuizSeed = await seedOpenBookQuestions(pool);
     const secondQuizSeed = await seedOpenBookQuestions(pool);

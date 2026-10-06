@@ -4,9 +4,9 @@
 `dict_idioms_2020_20260929.xlsx` 篩選產生，保留四個純漢字的詞目、注音與
 「主條成語／非主條成語」分類，共 5,310 筆。
 
-`moe-idioms-expanded-20261006.json` 再合併教育部《成語典》「編輯總資料庫」：
-只納入四個純漢字且在彙整的成語工具書中出現至少 4 次的詞目，與正文去重後
-共 11,999 筆。機器人實際使用此擴充版本；正文條目保留原有注音與分類，新增
+`moe-idioms-expanded-20261006-f3.json` 再合併教育部《成語典》「編輯總資料庫」：
+只納入四個純漢字且在彙整的成語工具書中出現至少 3 次的詞目，與正文去重後
+共 14,382 筆。機器人實際使用此擴充版本；正文條目保留原有注音與分類，新增
 條目則保留編輯總資料庫的收錄頻次。官方說明提醒總資料庫可能含有不同用字與
 重複條目，因此不直接納入只出現於少數工具書的詞目。
 
@@ -34,9 +34,9 @@ python scripts/build-idiom-dataset.py `
 python scripts/build-expanded-idiom-dataset.py `
   data/moe-idioms-2020-20260929.json `
   editorial-total.csv `
-  data/moe-idioms-expanded-YYYYMMDD.json `
-  --source-version 2020_20260929+editorial-YYYYMMDD-f4 `
-  --minimum-frequency 4
+  data/moe-idioms-expanded-YYYYMMDD-f3.json `
+  --source-version 2020_20260929+editorial-YYYYMMDD-f3 `
+  --minimum-frequency 3
 ```
 
 # 「開卷有益」國中教育會考題庫
