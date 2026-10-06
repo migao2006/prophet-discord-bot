@@ -105,6 +105,26 @@ test('number chain ignores bots and disabled channels', async () => {
   assert.deepEqual(disabled.reactions, []);
 });
 
+test('number chain delegates awarded progress without posting a local level notice', async () => {
+  const progress = {
+    awarded: true,
+    leveledUp: true,
+    titleChanged: true,
+    profile: { level: 2 },
+  };
+  const calls = [];
+  const service = new NumberChainService({
+    tryAdvance: async () => ({ status: 'correct', currentNumber: '1', progress }),
+  }, { error: () => {} }, {
+    handleAward: async (...args) => calls.push(args),
+  });
+  const message = createMessage('1');
+  message.client = { id: 'client' };
+  await service.handleMessage(message);
+  assert.equal(message.replies.length, 0);
+  assert.deepEqual(calls, [[message.client, 'guild', 'user', progress]]);
+});
+
 test('number chain command configures only the current text channel with an ephemeral reply', async () => {
   let saved;
   let reply;

@@ -19,6 +19,7 @@ import { OpenBookQuizService } from '../features/games/open-book-quiz/service.js
 import { FunImageService } from '../features/fun-images/service.js';
 import { GameProgressRepository } from '../features/games/progress/repository.js';
 import { GameLevelRoleService } from '../features/games/progress/role-service.js';
+import { GameProgressService } from '../features/games/progress/service.js';
 import { registerBotEvents } from './register-events.js';
 
 const INTENTS = [
@@ -39,14 +40,19 @@ export async function createBot({ database, logger }) {
   const serverStatsService = new ServerStatsService(memberRepository, activityTracker);
   const gameProgressRepository = new GameProgressRepository(database, logger);
   const gameLevelRoleService = new GameLevelRoleService(gameProgressRepository, logger);
+  const gameProgressService = new GameProgressService(
+    gameProgressRepository,
+    gameLevelRoleService,
+    logger,
+  );
   const numberChainRepository = new NumberChainRepository(database, gameProgressRepository);
-  const numberChainService = new NumberChainService(numberChainRepository, logger, gameLevelRoleService);
+  const numberChainService = new NumberChainService(numberChainRepository, logger, gameProgressService);
   const bullsAndCowsRepository = new BullsAndCowsRepository(database, undefined, gameProgressRepository);
-  const bullsAndCowsService = new BullsAndCowsService(bullsAndCowsRepository, logger, gameLevelRoleService);
+  const bullsAndCowsService = new BullsAndCowsService(bullsAndCowsRepository, logger, gameProgressService);
   const idiomChainRepository = new IdiomChainRepository(database, gameProgressRepository);
-  const idiomChainService = new IdiomChainService(idiomChainRepository, logger, gameLevelRoleService);
+  const idiomChainService = new IdiomChainService(idiomChainRepository, logger, gameProgressService);
   const openBookQuizRepository = new OpenBookQuizRepository(database, gameProgressRepository);
-  const openBookQuizService = new OpenBookQuizService(openBookQuizRepository, logger, gameLevelRoleService);
+  const openBookQuizService = new OpenBookQuizService(openBookQuizRepository, logger, gameProgressService);
   const funImageService = new FunImageService({ logger });
   const commands = await loadCommands();
   const client = new Client({
@@ -66,6 +72,7 @@ export async function createBot({ database, logger }) {
       funImageService,
       gameProgressRepository,
       gameLevelRoleService,
+      gameProgressService,
     },
     logger,
   });

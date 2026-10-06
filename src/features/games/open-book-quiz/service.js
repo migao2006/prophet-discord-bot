@@ -6,7 +6,6 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { errorCode } from '../../../core/config.js';
-import { levelUpText } from '../progress/domain.js';
 
 export const OPEN_BOOK_BUTTON_PREFIX = 'openbook';
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -55,10 +54,10 @@ export function createQuestionPayload(question, content) {
 }
 
 export class OpenBookQuizService {
-  constructor(repository, logger, roleService = null) {
+  constructor(repository, logger, progressService = null) {
     this.repository = repository;
     this.logger = logger;
-    this.roleService = roleService;
+    this.progressService = progressService;
   }
 
   async publishInteractionQuestion(interaction, question, content) {
@@ -137,11 +136,9 @@ export class OpenBookQuizService {
       await interaction.message.edit({ components: disabledRows(interaction.message.components) });
     }
     const answer = `${LETTERS[result.question.answerIndex]}．${result.question.options[result.question.answerIndex]}`;
-    const levelNotice = result.progress?.leveledUp
-      ? `\n${levelUpText(interaction.user.id, result.progress.profile.level)}` : '';
     const message = await interaction.channel.send(createQuestionPayload(
       result.nextQuestion,
-      `🎉 <@${interaction.user.id}> 答對啦！答案是 **${answer}**${levelNotice}\n下一題來囉～`,
+      `🎉 <@${interaction.user.id}> 答對啦！答案是 **${answer}**\n下一題來囉～`,
     ));
     await this.repository.setMessageId(
       interaction.guildId,
@@ -149,8 +146,13 @@ export class OpenBookQuizService {
       result.nextQuestion.id,
       message.id,
     );
-    if (result.progress?.titleChanged && this.roleService) {
-      await this.roleService.syncUserAcrossGuilds(interaction.client, interaction.user.id);
+    if (this.progressService) {
+      await this.progressService.handleAward(
+        interaction.client,
+        interaction.guildId,
+        interaction.user.id,
+        result.progress,
+      );
     }
     return true;
   }

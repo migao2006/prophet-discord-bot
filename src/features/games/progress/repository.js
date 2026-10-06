@@ -139,4 +139,30 @@ export class GameProgressRepository {
     );
     return result.rows.map((row) => row.guild_id);
   }
+
+  async getLevelNotificationSetting(guildId) {
+    const result = await this.pool.query(
+      `SELECT enabled, channel_id
+       FROM guild_level_notification_settings
+       WHERE guild_id = $1`,
+      [guildId],
+    );
+    return {
+      enabled: result.rows[0]?.enabled ?? false,
+      channelId: result.rows[0]?.channel_id ?? null,
+    };
+  }
+
+  async setLevelNotification(guildId, enabled, channelId = null) {
+    await this.ensureGuild(guildId);
+    await this.pool.query(
+      `INSERT INTO guild_level_notification_settings (guild_id, enabled, channel_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (guild_id) DO UPDATE SET
+         enabled = EXCLUDED.enabled,
+         channel_id = COALESCE(EXCLUDED.channel_id, guild_level_notification_settings.channel_id),
+         updated_at = now()`,
+      [guildId, enabled, channelId],
+    );
+  }
 }

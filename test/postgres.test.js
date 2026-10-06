@@ -10,6 +10,7 @@ import { NumberChainRepository } from '../src/features/games/number-chain/reposi
 import { BullsAndCowsRepository } from '../src/features/games/bulls-and-cows/repository.js';
 import { IdiomChainRepository } from '../src/features/games/idiom-chain/repository.js';
 import { OpenBookQuizRepository } from '../src/features/games/open-book-quiz/repository.js';
+import { GameProgressRepository } from '../src/features/games/progress/repository.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -41,6 +42,21 @@ test('PostgreSQL migration and activity writes are idempotent', {
     const repository = new ActivityRepository(pool);
     const guildId = `test-${Date.now()}`;
     await repository.ensureGuild(guildId, new Date('2026-10-04T00:00:00Z'));
+    const progress = new GameProgressRepository(pool);
+    assert.deepEqual(await progress.getLevelNotificationSetting(guildId), {
+      enabled: false,
+      channelId: null,
+    });
+    await progress.setLevelNotification(guildId, true, 'level-notices');
+    assert.deepEqual(await progress.getLevelNotificationSetting(guildId), {
+      enabled: true,
+      channelId: 'level-notices',
+    });
+    await progress.setLevelNotification(guildId, false);
+    assert.deepEqual(await progress.getLevelNotificationSetting(guildId), {
+      enabled: false,
+      channelId: 'level-notices',
+    });
     const message = {
       messageId: `message-${Date.now()}`,
       guildId,

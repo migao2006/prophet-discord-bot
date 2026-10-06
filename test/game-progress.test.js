@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Collection, PermissionFlagsBits } from 'discord.js';
+import {
+  ChannelType,
+  Collection,
+  MessageFlags,
+  PermissionFlagsBits,
+} from 'discord.js';
 import {
   GAME_XP,
   LEVEL_TITLES,
@@ -11,16 +16,21 @@ import {
 } from '../src/features/games/progress/domain.js';
 import { GameProgressRepository } from '../src/features/games/progress/repository.js';
 import { GameLevelRoleService } from '../src/features/games/progress/role-service.js';
+import { GameProgressService } from '../src/features/games/progress/service.js';
 import { data as levelData } from '../src/commands/games/game-level.js';
 import { data as rankingData } from '../src/commands/games/game-ranking.js';
 import { data as roleData } from '../src/commands/games/level-roles.js';
+import {
+  data as notificationData,
+  execute as executeNotification,
+} from '../src/commands/games/level-notifications.js';
 
 test('game XP values, level thresholds, and five-level titles match the design', () => {
   assert.deepEqual(GAME_XP, {
-    number_chain: 2,
-    bulls_and_cows: 25,
-    idiom_chain: 8,
-    open_book_quiz: 10,
+    number_chain: 4,
+    bulls_and_cows: 50,
+    idiom_chain: 16,
+    open_book_quiz: 20,
   });
   assert.equal(LEVEL_TITLES.length, 21);
   assert.equal(xpForLevel(1), 0);
@@ -57,7 +67,7 @@ test('XP awards are idempotent and the first award triggers role synchronization
       return {
         rows: [{
           user_id: 'user',
-          total_xp: '2',
+          total_xp: '4',
           number_chain_successes: '1',
           bulls_and_cows_wins: '0',
           idiom_chain_successes: '0',
@@ -77,7 +87,7 @@ test('XP awards are idempotent and the first award triggers role synchronization
     gameType: 'number_chain',
   });
   assert.equal(first.awarded, true);
-  assert.equal(first.xp, 2);
+  assert.equal(first.xp, 4);
   assert.equal(first.profile.numberChainSuccesses, 1);
   assert.equal(first.titleChanged, true);
   assert.equal(first.leveledUp, false);
@@ -163,4 +173,152 @@ test('new game progress commands expose the intended Chinese interface', () => {
     { name: '開啟', value: '開啟' },
     { name: '關閉', value: '關閉' },
   ]);
+
+  const notifications = notificationData.toJSON();
+  assert.equal(notifications.name, '升等通知');
+  assert.equal(
+    notifications.default_member_permissions,
+    PermissionFlagsBits.Administrator.toString(),
+  );
+  assert.deepEqual(
+    notifications.options[0].choices.map(({ name, value }) => ({ name, value })),
+    [
+      { name: '開啟', value: '開啟' },
+      { name: '關閉', value: '關閉' },
+    ],
+  );
+});
+
+test('level notification command stores the current channel and can disable it server-wide', async () => {
+  const calls = [];
+  const replies = [];
+  let state = '開啟';
+  const interaction = {
+    inGuild: () => true,
+    guild: { id: 'guild' },
+    guildId: 'guild',
+    channelId: 'notice',
+    channel: { type: ChannelType.GuildText },
+    memberPermissions: { has: () => true },
+    appPermissions: { has: () => true },
+    options: { getString: () => state },
+    reply: async (value) => replies.push(value),
+  };
+  const gameProgressRepository = {
+    setLevelNotification: async (...args) => calls.push(args),
+  };
+  await executeNotification(interaction, { gameProgressRepository });
+  assert.deepEqual(calls[0], ['guild', true, 'notice']);
+  assert.equal(replies[0].flags, MessageFlags.Ephemeral);
+  assert.match(replies[0].content, /<#notice>/);
+
+  state = '關閉';
+  await executeNotification(interaction, { gameProgressRepository });
+  assert.deepEqual(calls[1], ['guild', false, null]);
+  assert.match(replies[1].content, /已關閉/);
+});
+
+test('level notification command rejects non-administrators and missing bot permissions', async () => {
+  let reply;
+  let saved = false;
+  const interaction = {
+    inGuild: () => true,
+    guild: { id: 'guild' },
+    guildId: 'guild',
+    channelId: 'notice',
+    channel: { type: ChannelType.GuildText },
+    memberPermissions: { has: () => false },
+    appPermissions: { has: () => true },
+    options: { getString: () => '開啟' },
+    reply: async (value) => { reply = value; },
+  };
+  const gameProgressRepository = {
+    setLevelNotification: async () => { saved = true; },
+  };
+  await executeNotification(interaction, { gameProgressRepository });
+  assert.match(reply.content, /只有伺服器管理員/);
+  assert.equal(saved, false);
+
+  interaction.memberPermissions.has = () => true;
+  interaction.appPermissions.has = () => false;
+  await executeNotification(interaction, { gameProgressRepository });
+  assert.match(reply.content, /檢視頻道/);
+  assert.equal(saved, false);
+});
+
+test('level notifications use the configured source-guild channel and ping the player', async () => {
+  const sent = [];
+  const roleSyncs = [];
+  const repository = {
+    getLevelNotificationSetting: async () => ({ enabled: true, channelId: 'notice' }),
+  };
+  const service = new GameProgressService(
+    repository,
+    { syncUserAcrossGuilds: async (...args) => roleSyncs.push(args) },
+    { error: () => {} },
+  );
+  const client = {
+    channels: {
+      fetch: async (channelId) => ({
+        id: channelId,
+        guildId: 'guild',
+        isTextBased: () => true,
+        send: async (payload) => sent.push(payload),
+      }),
+    },
+  };
+  await service.handleAward(client, 'guild', 'user', {
+    awarded: true,
+    leveledUp: true,
+    titleChanged: true,
+    profile: { level: 5 },
+  });
+  assert.equal(roleSyncs.length, 1);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].content, /<@user>/);
+  assert.match(sent[0].content, /Lv\.5/);
+  assert.deepEqual(sent[0].allowedMentions, { parse: [], users: ['user'] });
+});
+
+test('disabled level notifications stay silent without blocking role synchronization', async () => {
+  let fetched = false;
+  let synced = false;
+  const service = new GameProgressService(
+    {
+      getLevelNotificationSetting: async () => ({ enabled: false, channelId: null }),
+    },
+    { syncUserAcrossGuilds: async () => { synced = true; } },
+    { error: () => {} },
+  );
+  await service.handleAward({
+    channels: { fetch: async () => { fetched = true; } },
+  }, 'guild', 'user', {
+    awarded: true,
+    leveledUp: true,
+    titleChanged: true,
+    profile: { level: 5 },
+  });
+  assert.equal(synced, true);
+  assert.equal(fetched, false);
+});
+
+test('an unavailable notification channel is logged and does not reject the award handler', async () => {
+  const errors = [];
+  const service = new GameProgressService(
+    {
+      getLevelNotificationSetting: async () => ({ enabled: true, channelId: 'missing' }),
+    },
+    { syncUserAcrossGuilds: async () => {} },
+    { error: (event, fields) => errors.push({ event, fields }) },
+  );
+  await service.handleAward({
+    channels: { fetch: async () => { throw new Error('Unknown Channel'); } },
+  }, 'guild', 'user', {
+    awarded: true,
+    leveledUp: true,
+    titleChanged: false,
+    profile: { level: 6 },
+  });
+  assert.equal(errors[0].event, 'game_level_notification_failed');
+  assert.equal(errors[0].fields.channelId, 'missing');
 });
