@@ -48,14 +48,16 @@ function createMessage(content, userId = 'user') {
   };
 }
 
-test('official idiom seed contains the expected unique four-character entries', async () => {
+test('expanded official idiom seed contains the expected unique four-character entries', async () => {
   const dataset = JSON.parse(await readFile(
-    new URL('../data/moe-idioms-2020-20260929.json', import.meta.url),
+    new URL('../data/moe-idioms-expanded-20261006.json', import.meta.url),
     'utf8',
   ));
-  assert.equal(dataset.sourceVersion, '2020_20260929');
-  assert.equal(dataset.entries.length, 5310);
-  assert.equal(new Set(dataset.entries.map((entry) => entry.idiom)).size, 5310);
+  assert.equal(dataset.sourceVersion, '2020_20260929+editorial-20261006-f4');
+  assert.equal(dataset.entries.length, 11999);
+  assert.equal(dataset.selection.coreEntryCount, 5310);
+  assert.equal(dataset.selection.editorialMinimumFrequency, 4);
+  assert.equal(new Set(dataset.entries.map((entry) => entry.idiom)).size, 11999);
   assert.ok(dataset.entries.every((entry) => /^\p{Script=Han}{4}$/u.test(entry.idiom)));
 });
 
